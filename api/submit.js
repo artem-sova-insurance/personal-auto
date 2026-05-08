@@ -751,26 +751,38 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
   let stageId = null;
 
   try {
+    // Fetch all pipelines with their stages
     const plRes  = await fetch('https://api.hubapi.com/crm/v3/pipelines/deals', { headers: hsHeaders });
     const plBody = await plRes.json().catch(() => ({}));
-    for (const pipeline of (plBody.results || [])) {
-      if (pipeline.label?.toLowerCase().includes('sales') || pipeline.id === 'default') {
-        pipelineId = pipeline.id;
-        const stage = (pipeline.stages || []).find((s) =>
-          s.label?.toLowerCase().includes('quot')
-        );
-        if (stage) { stageId = stage.id; break; }
-      }
+    const pipelines = plBody.results || [];
+
+    // Prefer pipeline with "sales" in name, fall back to first pipeline
+    const preferred = pipelines.find((p) => p.label?.toLowerCase().includes('sales'))
+      || pipelines.find((p) => p.id === 'default')
+      || pipelines[0];
+
+    if (preferred) {
+      pipelineId = preferred.id;
     }
-    // Fallback: just grab first stage of the found pipeline
-    if (!stageId) {
-      const plRes2  = await fetch(`https://api.hubapi.com/crm/v3/pipelines/deals/${pipelineId}/stages`, { headers: hsHeaders });
-      const plBody2 = await plRes2.json().catch(() => ({}));
-      stageId = plBody2.results?.[0]?.id || 'appointmentscheduled';
-    }
+
+    // Always fetch stages explicitly (pipeline list may not include stages)
+    const stRes  = await fetch(`https://api.hubapi.com/crm/v3/pipelines/deals/${pipelineId}/stages`, { headers: hsHeaders });
+    const stBody = await stRes.json().catch(() => ({}));
+    const stages = stBody.results || [];
+
+    // Prefer a "quoting" stage, otherwise use the first stage
+    const quotingStage = stages.find((s) => s.label?.toLowerCase().includes('quot'));
+    stageId = (quotingStage || stages[0])?.id ?? null;
+
+    console.log(`HubSpot deal: pipeline=${pipelineId}, stage=${stageId}`);
   } catch (e) {
-    console.warn('HubSpot pipeline lookup failed, using defaults:', e.message);
-    stageId = 'appointmentscheduled';
+    console.warn('HubSpot pipeline lookup failed:', e.message);
+  }
+
+  // If we still have no stage, skip deal creation rather than send invalid data
+  if (!stageId) {
+    console.warn('HubSpot: could not determine deal stage — skipping deal creation');
+    return null;
   }
 
   // Close date: 14 days from now at midnight UTC
