@@ -572,11 +572,56 @@ function toHsDate(dateStr) {
   return isNaN(d.getTime()) ? undefined : String(d.getTime());
 }
 
+// ── HubSpot option value maps (form value → HubSpot slugified value) ──────────
+// These align form dropdown values with the slugified option values created by
+// create-hubspot-personal-auto-properties.js (opts() lower-slugifies each label).
+
+const HS_HOMEOWNER = {
+  own: 'yes', rent: 'no', renting: 'no', other: 'no',
+};
+const HS_ANNUAL_MILES = {
+  under5k:  'under_5_000',
+  '5to7k':  '5_000_7_500',
+  '7to15k': '12_000_15_000',   // closest bin in HS property
+  '15to20k':'15_000_20_000',
+  over20k:  'over_20_000',
+};
+const HS_PRIMARY_USE = {
+  commute:  'commute',
+  pleasure: 'pleasure',
+  business: 'business',
+  rideshare:'commute',          // HS has no rideshare option; map to commute
+  turo:     'pleasure',         // HS has no turo option; map to pleasure
+};
+const HS_BI_LIMITS = {
+  state_min:    'state_minimum',
+  '10_20_10':   'state_minimum',  // no direct match; round down
+  '25_50_25':   '25_000_50_000',
+  '50_100_50':  '50_000_100_000',
+  '100_300_100':'100_000_300_000',
+  '250_500_250':'250_000_500_000',
+};
+const HS_YEARS_CARRIER = {
+  under1: 'less_than_1_year',
+  '1to2': '1_year',
+  '3to5': '3_years',
+  over5:  '5_years',            // HS max is "5+ years" → value "5_years"
+};
+// HubSpot deductible slugs: $1,000 → "1_000", $2,500 → "2_500", etc.
+const HS_DEDUCTIBLE = {
+  '100': '100', '250': '250', '500': '500', '1000': '1_000', '2500': '2_500',
+};
+
 // Build pa_* custom properties from form submission data
 function buildPaProperties(data) {
   const v = (val) => (val !== undefined && val !== null && val !== '') ? String(val) : undefined;
   const vehicles = data.vehicles || [];
   const drivers  = data.additionalDrivers || [];
+
+  const mapDeductible = (raw, noValKey) => {
+    if (!raw) return undefined;
+    return HS_DEDUCTIBLE[String(raw)] ?? v(raw);
+  };
 
   const vProps = (veh, n) => !veh ? {} : {
     [`pa_v${n}_year`]:          v(veh.year),
@@ -585,8 +630,8 @@ function buildPaProperties(data) {
     [`pa_v${n}_vin`]:           v(veh.vin),
     [`pa_v${n}_ownership`]:     v(veh.ownership),
     [`pa_v${n}_lienholder`]:    v(veh.lienholder),
-    [`pa_v${n}_annual_mileage`]:v(veh.annualMiles),
-    [`pa_v${n}_primary_use`]:   v(veh.usage),
+    [`pa_v${n}_annual_mileage`]:HS_ANNUAL_MILES[veh.annualMiles] ?? v(veh.annualMiles),
+    [`pa_v${n}_primary_use`]:   HS_PRIMARY_USE[veh.usage]        ?? v(veh.usage),
   };
 
   const dProps = (drv, n) => !drv ? {} : {
@@ -595,16 +640,16 @@ function buildPaProperties(data) {
     [`pa_d${n}_dob`]:           toHsDate(drv.dateOfBirth),
     [`pa_d${n}_relationship`]:  v(drv.relationship),
     [`pa_d${n}_license_number`]:v(drv.licenseNumber),
-    [`pa_d${n}_license_state`]: v(drv.licenseState),
+    [`pa_d${n}_license_state`]: v(drv.licenseState?.toLowerCase()),
   };
 
   const raw = {
     // ── Primary driver ────────────────────────────────────────────
     pa_dob:                    toHsDate(data.dateOfBirth),
     pa_marital_status:         v(data.maritalStatus),
-    pa_is_homeowner:           v(data.homeownerStatus),
+    pa_is_homeowner:           HS_HOMEOWNER[data.homeownerStatus] ?? (data.homeownerStatus ? 'no' : undefined),
     pa_license_number:         v(data.licenseNumber),
-    pa_license_state:          v(data.licenseState),
+    pa_license_state:          v(data.licenseState?.toLowerCase()),
     // ── Vehicles ──────────────────────────────────────────────────
     ...vProps(vehicles[0], 1),
     ...vProps(vehicles[1], 2),
@@ -617,11 +662,11 @@ function buildPaProperties(data) {
     // ── Current insurance ─────────────────────────────────────────
     pa_has_current_insurance:  v(data.currentlyInsured),
     pa_current_carrier:        v(data.currentInsurer),
-    pa_years_with_carrier:     v(data.yearsInsured),
+    pa_years_with_carrier:     HS_YEARS_CARRIER[data.yearsInsured] ?? v(data.yearsInsured),
     // ── Coverage requested ────────────────────────────────────────
-    pa_desired_bi_limits:      v(data.liabilityLimit),
-    pa_coll_deductible:        v(data.collisionDeductible || (data.hasCollision === 'no' ? 'no_collision' : undefined)),
-    pa_comp_deductible:        v(data.comprehensiveDeductible || (data.hasComprehensive === 'no' ? 'no_comprehensive' : undefined)),
+    pa_desired_bi_limits:      HS_BI_LIMITS[data.liabilityLimit]  ?? v(data.liabilityLimit),
+    pa_coll_deductible:        data.hasCollision     === 'no' ? 'no_collision'     : mapDeductible(data.collisionDeductible),
+    pa_comp_deductible:        data.hasComprehensive === 'no' ? 'no_comprehensive' : mapDeductible(data.comprehensiveDeductible),
   };
 
   // Strip undefined values before returning
