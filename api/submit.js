@@ -797,17 +797,42 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
   closeDate.setDate(closeDate.getDate() + 14);
   closeDate.setUTCHours(0, 0, 0, 0);
 
+  // Map current insurer slug → readable label for deal card
+  const CARRIER_LABELS = {
+    state_farm: 'State Farm', geico: 'GEICO', progressive: 'Progressive',
+    allstate: 'Allstate', usaa: 'USAA', farmers: 'Farmers',
+    liberty_mutual: 'Liberty Mutual', nationwide: 'Nationwide',
+    aaa: 'AAA', travelers: 'Travelers', other: 'Other', dont_know: 'Unknown',
+  };
+
+  // Map current insurance status → prior_insurance enum
+  const priorInsurance = data.currentlyInsured === 'yes'
+    ? 'Yes - Continuous'
+    : data.currentlyInsured === 'no'
+      ? 'No Prior Insurance'
+      : undefined;
+
+  const driverCount  = 1 + (data.additionalDrivers?.length || 0);
+  const vehicleCount = data.vehicles?.length || 0;
+
   const dealRes = await fetch('https://api.hubapi.com/crm/v3/objects/deals', {
     method: 'POST',
     headers: hsHeaders,
     body: JSON.stringify({
       properties: {
-        dealname:  `Personal Auto Quote — ${data.firstName || ''} ${data.lastName || ''}`.trim(),
-        pipeline:  pipelineId,
-        dealstage: stageId,
-        closedate: String(closeDate.getTime()),
-        dealtype:  'newbusiness',
-        hs_priority: 'medium',
+        dealname:          `Personal Auto Quote — ${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        pipeline:          pipelineId,
+        dealstage:         stageId,
+        closedate:         String(closeDate.getTime()),
+        dealtype:          'newbusiness',
+        hs_priority:       'medium',
+        // Deal card fields
+        policy_type:       'Personal Auto',
+        current_carrier:   CARRIER_LABELS[data.currentInsurer] || data.currentInsurer || undefined,
+        prior_insurance:   priorInsurance,
+        drivers_on_policy: driverCount,
+        vehicles_on_policy:vehicleCount,
+        sr22_required:     'false',
       },
       associations: [{
         to: { id: contactId },
