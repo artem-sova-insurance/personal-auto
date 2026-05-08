@@ -751,29 +751,32 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
   let stageId = null;
 
   try {
-    // Fetch all pipelines (list includes stage arrays)
+    // Try /crm/v3/pipelines/deals which should return pipelines with embedded stages
     const plRes  = await fetch('https://api.hubapi.com/crm/v3/pipelines/deals', { headers: hsHeaders });
     const plBody = await plRes.json().catch(() => ({}));
     const pipelines = plBody.results || [];
 
-    // Prefer pipeline with "sales" in name, fall back to "default" id, then first
     const preferred = pipelines.find((p) => p.label?.toLowerCase().includes('sales'))
       || pipelines.find((p) => p.id === 'default')
       || pipelines[0];
 
     if (preferred) {
       pipelineId = preferred.id;
-      const stages = preferred.stages || [];
-      const quotingStage = stages.find((s) => s.label?.toLowerCase().includes('quot'));
+      // Stages may be nested as .stages or .stageOrder — log what we get
+      const stages = preferred.stages || preferred.stageOrder || [];
+      console.log(`HubSpot pipeline stages (list): ${JSON.stringify(stages).slice(0, 200)}`);
+      const quotingStage = stages.find((s) => (s.label || s.displayName || '').toLowerCase().includes('quot'));
       stageId = (quotingStage || stages[0])?.id ?? null;
     }
 
-    // If pipeline list didn't include stages, fetch the single pipeline record
+    // If stages weren't in the list, fetch the single pipeline record
     if (!stageId) {
       const spRes  = await fetch(`https://api.hubapi.com/crm/v3/pipelines/deals/${pipelineId}`, { headers: hsHeaders });
       const spBody = await spRes.json().catch(() => ({}));
-      const stages = spBody.stages || [];
-      const quotingStage = stages.find((s) => s.label?.toLowerCase().includes('quot'));
+      // HubSpot sometimes nests stages under .stages, sometimes under .stageOrder
+      const stages = spBody.stages || spBody.stageOrder || [];
+      console.log(`HubSpot pipeline stages (single): ${JSON.stringify(stages).slice(0, 200)}`);
+      const quotingStage = stages.find((s) => (s.label || s.displayName || '').toLowerCase().includes('quot'));
       stageId = (quotingStage || stages[0])?.id ?? null;
     }
 
@@ -782,7 +785,7 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
     console.warn('HubSpot pipeline lookup failed:', e.message);
   }
 
-  // If we still have no stage, skip deal creation rather than send invalid data
+  // If still no stage, skip deal creation rather than send invalid data
   if (!stageId) {
     console.warn('HubSpot: could not determine deal stage — skipping deal creation');
     return null;
