@@ -751,28 +751,31 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
   let stageId = null;
 
   try {
-    // Fetch all pipelines with their stages
+    // Fetch all pipelines (list includes stage arrays)
     const plRes  = await fetch('https://api.hubapi.com/crm/v3/pipelines/deals', { headers: hsHeaders });
     const plBody = await plRes.json().catch(() => ({}));
     const pipelines = plBody.results || [];
 
-    // Prefer pipeline with "sales" in name, fall back to first pipeline
+    // Prefer pipeline with "sales" in name, fall back to "default" id, then first
     const preferred = pipelines.find((p) => p.label?.toLowerCase().includes('sales'))
       || pipelines.find((p) => p.id === 'default')
       || pipelines[0];
 
     if (preferred) {
       pipelineId = preferred.id;
+      const stages = preferred.stages || [];
+      const quotingStage = stages.find((s) => s.label?.toLowerCase().includes('quot'));
+      stageId = (quotingStage || stages[0])?.id ?? null;
     }
 
-    // Always fetch stages explicitly (pipeline list may not include stages)
-    const stRes  = await fetch(`https://api.hubapi.com/crm/v3/pipelines/deals/${pipelineId}/stages`, { headers: hsHeaders });
-    const stBody = await stRes.json().catch(() => ({}));
-    const stages = stBody.results || [];
-
-    // Prefer a "quoting" stage, otherwise use the first stage
-    const quotingStage = stages.find((s) => s.label?.toLowerCase().includes('quot'));
-    stageId = (quotingStage || stages[0])?.id ?? null;
+    // If pipeline list didn't include stages, fetch the single pipeline record
+    if (!stageId) {
+      const spRes  = await fetch(`https://api.hubapi.com/crm/v3/pipelines/deals/${pipelineId}`, { headers: hsHeaders });
+      const spBody = await spRes.json().catch(() => ({}));
+      const stages = spBody.stages || [];
+      const quotingStage = stages.find((s) => s.label?.toLowerCase().includes('quot'));
+      stageId = (quotingStage || stages[0])?.id ?? null;
+    }
 
     console.log(`HubSpot deal: pipeline=${pipelineId}, stage=${stageId}`);
   } catch (e) {
