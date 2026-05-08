@@ -785,10 +785,11 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
     console.warn('HubSpot pipeline lookup failed:', e.message);
   }
 
-  // If still no stage, skip deal creation rather than send invalid data
+  // If pipeline lookup returned no stages (happens on some HS accounts),
+  // fall back to the first known stage ID for the default pipeline.
   if (!stageId) {
-    console.warn('HubSpot: could not determine deal stage — skipping deal creation');
-    return null;
+    stageId = '1802529492'; // first stage of default pipeline (confirmed from deal records)
+    console.log(`HubSpot deal: using hardcoded fallback stage ${stageId}`);
   }
 
   // Close date: 14 days from now at midnight UTC
