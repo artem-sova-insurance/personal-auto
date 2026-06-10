@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from './i18n';
 import ProgressBar from './components/ProgressBar';
 import LanguageStep from './components/steps/LanguageStep';
@@ -11,6 +11,7 @@ import SuccessStep from './components/steps/SuccessStep';
 
 const INITIAL_DATA = {
   language: null,
+  _hp: '', // honeypot — must stay empty; bots that fill it are silently dropped
   // Contact
   firstName: '',
   lastName: '',
@@ -22,6 +23,7 @@ const INITIAL_DATA = {
   zipCode: '',
   homeownerStatus: '',
   address: '',
+  occupation: '',
   // Primary driver license
   licenseNumber: '',
   licenseState: '',
@@ -50,7 +52,7 @@ const INITIAL_DATA = {
   additionalNotes: '',
 };
 
-const CONTACT_REQUIRED = ['firstName', 'lastName', 'dateOfBirth', 'maritalStatus', 'email', 'phone', 'state', 'zipCode', 'licenseNumber', 'licenseState'];
+const CONTACT_REQUIRED = ['firstName', 'lastName', 'dateOfBirth', 'maritalStatus', 'email', 'phone', 'address', 'state', 'zipCode', 'licenseNumber', 'licenseState', 'occupation'];
 
 // Steps: 0=Language, 1=Contact, 2=Vehicles, 3=Drivers, 4=History, 5=Coverage, 6=Success
 const TOTAL_STEPS = 5; // shown in progress bar (steps 1–5)
@@ -61,6 +63,7 @@ export default function App() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const startedAt = useRef(Date.now());
 
   const { t } = useTranslation(data.language);
 
@@ -101,6 +104,12 @@ export default function App() {
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       errs.email = t('common.invalidEmail');
     }
+    if (data.phone && String(data.phone).replace(/\D/g, '').length < 10) {
+      errs.phone = 'Please enter a valid 10-digit phone number';
+    }
+    if (data.zipCode && !/^\d{5}(-\d{4})?$/.test(data.zipCode)) {
+      errs.zipCode = 'Invalid ZIP code';
+    }
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
       setTimeout(() => document.querySelector('[data-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
@@ -116,7 +125,7 @@ export default function App() {
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, _elapsedMs: Date.now() - startedAt.current }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -153,6 +162,14 @@ export default function App() {
         </div>
 
         <div className="px-6 py-6">
+          {/* Honeypot — invisible to humans; bots that fill it are silently dropped */}
+          <input
+            type="text" name="website" value={data._hp}
+            onChange={(e) => update('_hp', e.target.value)}
+            autoComplete="off" tabIndex={-1} aria-hidden="true"
+            style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }}
+          />
+
           {showProgress && <ProgressBar currentStep={step} totalSteps={TOTAL_STEPS} t={t} />}
 
           {step === 0 && (

@@ -18,6 +18,31 @@ function fmt(v) {
   return String(v);
 }
 
+// Escape user-supplied values before interpolating into HTML emails / notes
+function esc(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+const OCCUPATION_LABELS = {
+  accountant: 'Accountant / CPA', attorney: 'Attorney / Lawyer', business_owner: 'Business Owner',
+  construction: 'Construction Worker', customer_service: 'Customer Service', delivery_driver: 'Delivery Driver',
+  doctor: 'Doctor / Physician', commercial_driver: 'Driver (Truck / Commercial)', engineer: 'Engineer',
+  farmer: 'Farmer / Agricultural Worker', financial_advisor: 'Financial Advisor', firefighter: 'Firefighter',
+  government: 'Government Employee', homemaker: 'Homemaker', it: 'IT / Technology Professional',
+  insurance: 'Insurance Professional', manager: 'Manager / Supervisor', marketing_sales: 'Marketing / Sales',
+  military: 'Military / Veteran', nurse: 'Nurse / Healthcare Worker', office: 'Office / Administrative Staff',
+  law_enforcement: 'Police / Law Enforcement', real_estate: 'Real Estate Agent', retiree: 'Retired',
+  self_employed: 'Self-Employed / Freelancer', student: 'Student', teacher: 'Teacher / Educator',
+  tradesperson: 'Tradesperson (Electrician / Plumber / HVAC)', warehouse: 'Warehouse / Logistics Worker',
+  other: 'Other',
+};
+const occLabel = (v) => OCCUPATION_LABELS[v] || v || '—';
+
 // Human-readable label maps
 const LIABILITY_LABELS = {
   state_min: 'State Minimum', '10_20_10': '$10k / $20k / $10k',
@@ -54,12 +79,12 @@ function buildHubSpotNote(data) {
   const vehicleRows = (data.vehicles || []).map((v, i) => {
     const label = `Vehicle ${i + 1}`;
     const val = [
-      `<strong>${v.year || ''} ${v.make || ''} ${v.model || ''}</strong>`,
-      v.vin ? `VIN: <code>${v.vin}</code>` : null,
-      v.usage ? `Use: ${USAGE_LABELS[v.usage] || v.usage}` : null,
-      v.annualMiles ? `Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles}` : null,
-      v.ownership ? `Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership}` : null,
-      v.lienholder ? `Lender: ${v.lienholder}` : null,
+      `<strong>${esc(v.year)} ${esc(v.make)} ${esc(v.model)}</strong>`,
+      v.vin ? `VIN: <code>${esc(v.vin)}</code>` : null,
+      v.usage ? `Use: ${esc(USAGE_LABELS[v.usage] || v.usage)}` : null,
+      v.annualMiles ? `Miles: ${esc(MILES_LABELS[v.annualMiles] || v.annualMiles)}` : null,
+      v.ownership ? `Ownership: ${esc(OWNERSHIP_LABELS[v.ownership] || v.ownership)}` : null,
+      v.lienholder ? `Lender: ${esc(v.lienholder)}` : null,
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
     return row(label, val);
   }).join('');
@@ -68,7 +93,7 @@ function buildHubSpotNote(data) {
   const additionalDrivers = data.additionalDrivers || [];
   const driverRows = data.isOnlyDriver === 'no' && additionalDrivers.length
     ? additionalDrivers.map((d, i) =>
-        row(`Driver ${i + 1}`, `<strong>${d.firstName || ''} ${d.lastName || ''}</strong> &nbsp;·&nbsp; DOB: ${d.dateOfBirth || '—'} &nbsp;·&nbsp; ${d.relationship || ''} &nbsp;·&nbsp; License: ${d.licenseState || '—'}`)
+        row(`Driver ${i + 1}`, `<strong>${esc(d.firstName)} ${esc(d.lastName)}</strong> &nbsp;·&nbsp; DOB: ${esc(d.dateOfBirth) || '—'} &nbsp;·&nbsp; ${esc(d.relationship)} &nbsp;·&nbsp; License: ${esc(d.licenseNumber) || '—'} (${esc(d.licenseState) || '—'})`)
       ).join('')
     : row('Drivers', 'Primary driver only');
 
@@ -89,16 +114,17 @@ function buildHubSpotNote(data) {
 
 ${h('👤 Contact Information')}
 ${table([
-  row('Name', `<strong>${name}</strong>`),
-  row('Email', data.email),
-  row('Phone', data.phone),
-  row('Date of Birth', data.dateOfBirth),
-  row('Marital Status', data.maritalStatus ? data.maritalStatus.charAt(0).toUpperCase() + data.maritalStatus.slice(1) : '—'),
-  row('Address', data.address || '—'),
-  row('State / ZIP', `${data.state || '—'} ${data.zipCode || ''}`),
-  row('Homeowner', data.homeownerStatus || '—'),
-  row('License #', data.licenseNumber || '—'),
-  row('License State', data.licenseState || '—'),
+  row('Name', `<strong>${esc(name)}</strong>`),
+  row('Email', esc(data.email)),
+  row('Phone', esc(data.phone)),
+  row('Date of Birth', esc(data.dateOfBirth)),
+  row('Marital Status', data.maritalStatus ? esc(data.maritalStatus.charAt(0).toUpperCase() + data.maritalStatus.slice(1)) : '—'),
+  row('Address', esc(data.address) || '—'),
+  row('State / ZIP', `${esc(data.state) || '—'} ${esc(data.zipCode)}`),
+  row('Homeowner', esc(data.homeownerStatus) || '—'),
+  row('Occupation', esc(occLabel(data.occupation))),
+  row('License #', esc(data.licenseNumber) || '—'),
+  row('License State', esc(data.licenseState) || '—'),
 ].join(''))}
 
 ${h('🚙 Vehicles')}
@@ -111,7 +137,7 @@ ${h('📋 Driving History')}
 ${table([
   violRows,
   accRows,
-  row('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${data.currentInsurer || '?'} (${data.yearsInsured || '?'})` : 'No'),
+  row('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${esc(data.currentInsurer) || '?'} (${esc(data.yearsInsured) || '?'})` : 'No'),
 ].join(''))}
 
 ${h('🛡️ Coverage Preferences')}
@@ -120,7 +146,7 @@ ${table([
   row('Collision', data.hasCollision === 'yes' ? `Yes — Deductible: ${fmtDeductible(data.collisionDeductible)}` : 'No'),
   row('Comprehensive', data.hasComprehensive === 'yes' ? `Yes — Deductible: ${fmtDeductible(data.comprehensiveDeductible)}` : 'No'),
   row('Additional Coverages', addlCov),
-  data.additionalNotes ? row('Notes', data.additionalNotes) : '',
+  data.additionalNotes ? row('Notes', esc(data.additionalNotes)) : '',
 ].join(''))}
 
 </div>`;
@@ -137,7 +163,7 @@ function buildSummary(data) {
 
   const driverLines = data.isOnlyDriver === 'no' && (data.additionalDrivers || []).length
     ? data.additionalDrivers.map((d, i) =>
-        `  Driver ${i + 1}: ${d.firstName || ''} ${d.lastName || ''} | DOB: ${d.dateOfBirth || '—'} | ${d.relationship || '—'} | License: ${d.licenseState || '—'}`
+        `  Driver ${i + 1}: ${d.firstName || ''} ${d.lastName || ''} | DOB: ${d.dateOfBirth || '—'} | ${d.relationship || '—'} | License: ${d.licenseNumber || '—'} (${d.licenseState || '—'})`
       ).join('\n')
     : '  Primary driver only';
 
@@ -150,7 +176,7 @@ function buildSummary(data) {
     : '  None';
 
   return [
-    `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Marital: ${fmt(data.maritalStatus)} | State: ${fmt(data.state)} ${fmt(data.zipCode)}`,
+    `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Marital: ${fmt(data.maritalStatus)} | Occupation: ${occLabel(data.occupation)}\nState: ${fmt(data.state)} ${fmt(data.zipCode)} | Address: ${fmt(data.address)}\nLicense: ${fmt(data.licenseNumber)} (${fmt(data.licenseState)})`,
     `VEHICLES\n${vehicleLines}`,
     `DRIVERS\nOnly Driver: ${fmt(data.isOnlyDriver)}\n${driverLines}`,
     `HISTORY\nViolations: ${fmt(data.hasViolations)}\n${violationLines}\nAccidents: ${fmt(data.hasAccidents)}\n${accidentLines}\nInsured: ${fmt(data.currentlyInsured)} — ${fmt(data.currentInsurer)} (${fmt(data.yearsInsured)})`,
@@ -169,11 +195,11 @@ function buildEmailHtml(data) {
   const metaItem = (label, value) =>
     `<td style="padding:10px 14px;vertical-align:top;border-right:1px solid #e5f0ef;">
       <div style="font-size:11px;color:#3e6d6a;text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:3px;">${label}</div>
-      <div style="font-size:14px;color:#1c3534;font-weight:600;">${value || '—'}</div>
+      <div style="font-size:14px;color:#1c3534;font-weight:600;">${esc(value) || '—'}</div>
     </td>`;
 
   const vehicleRows = vehicles.map((v) =>
-    `<span style="display:inline-block;background:#daeeed;color:#1c3534;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;margin:2px 4px 2px 0;">${v.year || ''} ${v.make || ''} ${v.model || ''}</span>`
+    `<span style="display:inline-block;background:#daeeed;color:#1c3534;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;margin:2px 4px 2px 0;">${esc(v.year)} ${esc(v.make)} ${esc(v.model)}</span>`
   ).join('');
 
   const addlCovPills = (data.additionalCoverages || []).map((c) =>
@@ -207,6 +233,16 @@ function buildEmailHtml(data) {
               ${metaItem('Email', data.email)}
               ${metaItem('DOB', data.dateOfBirth)}
               ${metaItem('Marital', data.maritalStatus)}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
+              ${metaItem('Address', data.address)}
+              ${metaItem('License #', data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'})` : '—')}
+              ${metaItem('ZIP', data.zipCode)}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
+              ${metaItem('Occupation', occLabel(data.occupation))}
+              ${metaItem('Homeowner', data.homeownerStatus || '—')}
+              ${metaItem('Language', data.language || 'en')}
             </tr>
             <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Liability', (data.liabilityLimit || '—').replace(/_/g, '/'))}
@@ -257,16 +293,17 @@ function buildEmailHtml(data) {
 // ── Lead confirmation email ────────────────────────────────────────────────────
 
 function buildLeadEmailHtml(data) {
-  const firstName = data.firstName || 'there';
+  const firstName = esc(data.firstName) || 'there';
   const vehicleCount = (data.vehicles || []).length;
-  const vehicleSummary = vehicleCount === 1
+  const vehicleSummaryRaw = vehicleCount === 1
     ? `${data.vehicles?.[0]?.year || ''} ${data.vehicles?.[0]?.make || ''} ${data.vehicles?.[0]?.model || ''}`.trim()
     : `${vehicleCount} vehicles`;
+  const vehicleSummary = esc(vehicleSummaryRaw);
 
   const row = (label, value) => `
     <tr>
       <td style="padding:10px 16px;font-size:12px;color:#6b7280;font-weight:600;width:40%;border-bottom:1px solid #e5eeec;background:#f6fafa;">${label}</td>
-      <td style="padding:10px 16px;font-size:13px;color:#1c3534;font-weight:600;border-bottom:1px solid #e5eeec;">${value || '—'}</td>
+      <td style="padding:10px 16px;font-size:13px;color:#1c3534;font-weight:600;border-bottom:1px solid #e5eeec;">${esc(value) || '—'}</td>
     </tr>`;
 
   const nextSteps = [
@@ -321,7 +358,7 @@ function buildLeadEmailHtml(data) {
         <td style="padding:24px 40px 0;">
           <div style="font-size:11px;font-weight:700;color:#3e6d6a;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:14px;">Your Submission</div>
           <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #e5eeec;">
-            ${row('Vehicle(s)', vehicleSummary)}
+            ${row('Vehicle(s)', vehicleSummaryRaw)}
             ${row('State', data.state)}
             ${row('Phone', data.phone)}
             ${row('Liability Limit', (data.liabilityLimit || '').replace(/_/g, '/').replace('state/min', 'State Minimum'))}
@@ -449,7 +486,7 @@ async function notifySlack(data) {
 
   const addlDrivers = (data.additionalDrivers || []);
   const driverLines = addlDrivers.length
-    ? addlDrivers.map((d) => `• ${d.firstName || ''} ${d.lastName || ''} (DOB: ${d.dateOfBirth || '—'}, ${d.relationship || ''})`).join('\n')
+    ? addlDrivers.map((d) => `• ${d.firstName || ''} ${d.lastName || ''} (DOB: ${d.dateOfBirth || '—'}, ${d.relationship || ''}) · License: ${d.licenseNumber || '—'} (${d.licenseState || '—'})`).join('\n')
     : 'Primary driver only';
 
   const collision     = data.hasCollision     === 'yes' ? `Yes ($${data.collisionDeductible})` : 'No';
@@ -471,12 +508,15 @@ async function notifySlack(data) {
 
     // Contact info
     { type: 'section', fields: [
-      f('Name',    name),
-      f('Phone',   data.phone),
-      f('Email',   data.email),
-      f('DOB',     data.dateOfBirth),
+      f('Name',       name),
+      f('Phone',      data.phone),
+      f('Email',      data.email),
+      f('DOB',        data.dateOfBirth),
       f('State / ZIP', `${data.state || '—'} ${data.zipCode || ''}`),
-      f('Marital', data.maritalStatus),
+      f('Marital',    data.maritalStatus),
+      f('Occupation', occLabel(data.occupation)),
+      f('Address',    data.address),
+      f('License #',  data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'})` : '—'),
     ]},
     { type: 'divider' },
 
@@ -870,6 +910,7 @@ async function notifyZapier(data) {
     applicant_state:        data.state      || '',
     applicant_zip:          data.zipCode    || '',
     applicant_marital:      data.maritalStatus || '',
+    applicant_occupation:   data.occupation    || '',
     applicant_homeowner:    data.homeownerStatus || '',
     applicant_license_num:  data.licenseNumber  || '',
     applicant_license_state:data.licenseState   || '',
@@ -961,7 +1002,7 @@ async function notifyZapier(data) {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
+  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || 'https://sovainsurance.com');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -973,6 +1014,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
+  // Anti-spam: honeypot filled or form submitted suspiciously fast (< 3s).
+  // Respond OK without processing so bots can't tell they were filtered.
+  if (data._hp || (typeof data._elapsedMs === 'number' && data._elapsedMs < 3000)) {
+    console.warn('Spam filter triggered: hp =', Boolean(data._hp), 'elapsedMs =', data._elapsedMs);
+    return res.status(200).json({ ok: true });
+  }
+
   const [emailErr, slackErr, airtableErr, hubspotErr, zapierErr] = await Promise.all([
     sendEmail(data).catch((e) => e),
     notifySlack(data).catch((e) => e),
@@ -981,16 +1029,16 @@ export default async function handler(req, res) {
     notifyZapier(data).catch((e) => e),
   ]);
 
-  const warnings = [];
-  if (emailErr)    { warnings.push(`Email: ${emailErr.message}`);       console.error('Email failed:', emailErr); }
-  if (slackErr)    { warnings.push(`Slack: ${slackErr.message}`);       console.error('Slack failed:', slackErr); }
-  if (airtableErr) { warnings.push(`Airtable: ${airtableErr.message}`); console.error('Airtable failed:', airtableErr); }
-  if (hubspotErr)  { warnings.push(`HubSpot: ${hubspotErr.message}`);   console.error('HubSpot failed:', hubspotErr); }
-  if (zapierErr)   { warnings.push(`Zapier: ${zapierErr.message}`);     console.error('Zapier failed:', zapierErr); }
+  // Log failures server-side only — never expose internals to the client
+  if (emailErr)    console.error('Email failed:', emailErr);
+  if (slackErr)    console.error('Slack failed:', slackErr);
+  if (airtableErr) console.error('Airtable failed:', airtableErr);
+  if (hubspotErr)  console.error('HubSpot failed:', hubspotErr);
+  if (zapierErr)   console.error('Zapier failed:', zapierErr);
 
   if (emailErr && slackErr && airtableErr && hubspotErr && zapierErr) {
-    return res.status(500).json({ message: 'All integrations failed. Please try again.' });
+    return res.status(500).json({ message: 'Submission failed. Please try again.' });
   }
 
-  return res.status(200).json({ ok: true, ...(warnings.length && { warnings }) });
+  return res.status(200).json({ ok: true });
 }

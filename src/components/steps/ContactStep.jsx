@@ -1,14 +1,29 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import DynamicForm from '../DynamicForm';
 import FormField from '../FormField';
 import { CONTACT_FIELDS } from '../../config/formConfig';
 import { US_STATES } from '../../i18n';
+import { readPhotoFile } from '../../utils/image';
 
 const FL_FIRST = ['FL', ...US_STATES.filter((s) => s !== 'FL')];
 const STATE_OPTIONS = FL_FIRST.map((s) => ({ value: s, label: s }));
 
 export default function ContactStep({ t, data, update, errors, onNext, onBack }) {
   const fileRef = useRef(null);
+  const [photoError, setPhotoError] = useState('');
+
+  const handlePhoto = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setPhotoError('');
+    try {
+      const dataUrl = await readPhotoFile(f);
+      update('licensePhotoName', f.name);
+      update('licensePhotoData', dataUrl);
+    } catch {
+      setPhotoError('This photo is too large. Please use an image under 3 MB.');
+    }
+  };
 
   return (
     <div className="animate-fade-in">
@@ -55,17 +70,8 @@ export default function ContactStep({ t, data, update, errors, onNext, onBack })
               <p className="text-xs text-gray-400 mt-0.5">{t('contact.licensePhotoSub')}</p>
             </div>
           </div>
-          <input
-            ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (!f) return;
-              update('licensePhotoName', f.name);
-              const reader = new FileReader();
-              reader.onload = (ev) => update('licensePhotoData', ev.target.result);
-              reader.readAsDataURL(f);
-            }}
-          />
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+          {photoError && <p className="mt-1.5 text-xs text-red-600">{photoError}</p>}
         </div>
       </div>
 

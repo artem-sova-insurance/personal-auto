@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import FormField from '../FormField';
 import { VIOLATION_TYPES, INCIDENT_YEARS, MONTHS, FL_INSURERS } from '../../config/formConfig';
 
 const EMPTY_VIOLATION = { month: '', year: '', type: '' };
 const EMPTY_ACCIDENT  = { month: '', year: '', atFault: '' };
 
-function IncidentRow({ item, index, onChange, onRemove, typeOptions, typeLabel, atFaultLabel, t }) {
+function IncidentRow({ item, index, onChange, onRemove, typeOptions, typeLabel, atFaultLabel, t, errors = {} }) {
   const upd = (f, v) => onChange({ ...item, [f]: v });
   const monthOptions = MONTHS.map((m) => ({ value: m.value, label: m.label }));
   const yearOptions  = INCIDENT_YEARS.map((y) => ({ value: y.value, label: y.label }));
@@ -13,14 +14,14 @@ function IncidentRow({ item, index, onChange, onRemove, typeOptions, typeLabel, 
   return (
     <div className="border border-gray-200 rounded-xl p-3 mb-3 bg-white animate-slide-down">
       <div className="grid grid-cols-3 gap-2 mb-2">
-        <FormField id={`im-${index}`} type="select" label={t('common.month')} value={item.month} onChange={(v) => upd('month', v)} options={monthOptions} />
-        <FormField id={`iy-${index}`} type="select" label={t('common.year')}  value={item.year}  onChange={(v) => upd('year', v)}  options={yearOptions} />
+        <FormField id={`im-${index}`} type="select" label={t('common.month')} value={item.month} onChange={(v) => upd('month', v)} options={monthOptions} error={errors.month} />
+        <FormField id={`iy-${index}`} type="select" label={t('common.year')}  value={item.year}  onChange={(v) => upd('year', v)}  options={yearOptions} error={errors.year} />
         {typeOptions && (
-          <FormField id={`it-${index}`} type="select" label={typeLabel} value={item.type} onChange={(v) => upd('type', v)} options={typeOptions} />
+          <FormField id={`it-${index}`} type="select" label={typeLabel} value={item.type} onChange={(v) => upd('type', v)} options={typeOptions} error={errors.type} />
         )}
       </div>
       {atFaultLabel && (
-        <FormField id={`iaf-${index}`} type="radio" label={atFaultLabel} value={item.atFault} onChange={(v) => upd('atFault', v)} options={yesNo} />
+        <FormField id={`iaf-${index}`} type="radio" label={atFaultLabel} value={item.atFault} onChange={(v) => upd('atFault', v)} options={yesNo} error={errors.atFault} />
       )}
       <button onClick={onRemove} className="text-xs text-red-500 hover:text-red-700 font-semibold">
         {t('common.remove')} ✕
@@ -30,6 +31,7 @@ function IncidentRow({ item, index, onChange, onRemove, typeOptions, typeLabel, 
 }
 
 export default function HistoryStep({ t, data, update, onNext, onBack }) {
+  const [localErrors, setLocalErrors] = useState({});
   const violations = data.violations || [];
   const accidents  = data.accidents  || [];
 
@@ -51,7 +53,54 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
     { value: 'over5',  label: t('history.years_over5') },
   ];
 
-  const canProceed = data.hasViolations && data.hasAccidents && data.currentlyInsured;
+  const req = t('common.required') || 'Required';
+
+  const handleNext = () => {
+    const errs = {};
+    if (!data.hasViolations)    errs.hasViolations    = req;
+    if (!data.hasAccidents)     errs.hasAccidents     = req;
+    if (!data.currentlyInsured) errs.currentlyInsured = req;
+
+    const violationErrors = data.hasViolations === 'yes'
+      ? violations.map((v) => {
+          const e = {};
+          if (!v.month) e.month = req;
+          if (!v.year)  e.year  = req;
+          if (!v.type)  e.type  = req;
+          return e;
+        })
+      : [];
+
+    const accidentErrors = data.hasAccidents === 'yes'
+      ? accidents.map((a) => {
+          const e = {};
+          if (!a.month)   e.month   = req;
+          if (!a.year)    e.year    = req;
+          if (!a.atFault) e.atFault = req;
+          return e;
+        })
+      : [];
+
+    if (data.currentlyInsured === 'yes') {
+      if (!data.currentInsurer) errs.currentInsurer = req;
+      if (!data.yearsInsured)   errs.yearsInsured   = req;
+    }
+
+    const hasRowErrors = violationErrors.some((e) => Object.keys(e).length > 0)
+      || accidentErrors.some((e) => Object.keys(e).length > 0);
+
+    if (Object.keys(errs).length > 0 || hasRowErrors) {
+      setLocalErrors({ ...errs, violationErrors, accidentErrors });
+      setTimeout(() => document.querySelector('[data-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+      return;
+    }
+    setLocalErrors({});
+    onNext();
+  };
+
+  const clearErr = (key) => setLocalErrors((p) => { const n = { ...p }; delete n[key]; return n; });
+  const violationErrors = localErrors.violationErrors || [];
+  const accidentErrors  = localErrors.accidentErrors  || [];
 
   return (
     <div className="animate-fade-in">
@@ -65,16 +114,23 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
         value={data.hasViolations}
         onChange={(v) => {
           update('hasViolations', v);
+          clearErr('hasViolations');
           if (v === 'yes' && violations.length === 0) update('violations', [{ ...EMPTY_VIOLATION }]);
           if (v === 'no') update('violations', []);
         }}
         options={yesNo}
+        error={localErrors.hasViolations}
       />
 
       {data.hasViolations === 'yes' && (
         <div className="ml-2 mb-4">
           {violations.map((item, i) => (
-            <IncidentRow key={i} index={i} item={item} onChange={(v) => updViolation(i, v)} onRemove={() => remViolation(i)}
+            <IncidentRow key={i} index={i} item={item} errors={violationErrors[i] || {}}
+              onChange={(v) => {
+                updViolation(i, v);
+                if (violationErrors[i]) { const ne = [...violationErrors]; ne[i] = {}; setLocalErrors((p) => ({ ...p, violationErrors: ne })); }
+              }}
+              onRemove={() => remViolation(i)}
               typeOptions={violTypeOptions} typeLabel={t('history.violationType')} t={t} />
           ))}
           <button onClick={addViolation} className="text-sm font-semibold text-brand-700 hover:text-brand-900 hover:bg-brand-50 px-3 py-1.5 rounded-lg transition-colors">
@@ -90,16 +146,23 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
         value={data.hasAccidents}
         onChange={(v) => {
           update('hasAccidents', v);
+          clearErr('hasAccidents');
           if (v === 'yes' && accidents.length === 0) update('accidents', [{ ...EMPTY_ACCIDENT }]);
           if (v === 'no') update('accidents', []);
         }}
         options={yesNo}
+        error={localErrors.hasAccidents}
       />
 
       {data.hasAccidents === 'yes' && (
         <div className="ml-2 mb-4">
           {accidents.map((item, i) => (
-            <IncidentRow key={i} index={i} item={item} onChange={(v) => updAccident(i, v)} onRemove={() => remAccident(i)}
+            <IncidentRow key={i} index={i} item={item} errors={accidentErrors[i] || {}}
+              onChange={(v) => {
+                updAccident(i, v);
+                if (accidentErrors[i]) { const ne = [...accidentErrors]; ne[i] = {}; setLocalErrors((p) => ({ ...p, accidentErrors: ne })); }
+              }}
+              onRemove={() => remAccident(i)}
               atFaultLabel={t('history.atFault')} t={t} />
           ))}
           <button onClick={addAccident} className="text-sm font-semibold text-brand-700 hover:text-brand-900 hover:bg-brand-50 px-3 py-1.5 rounded-lg transition-colors">
@@ -113,21 +176,24 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
         id="currentlyInsured" type="radio"
         label={t('history.currentlyInsured')}
         value={data.currentlyInsured}
-        onChange={(v) => update('currentlyInsured', v)}
+        onChange={(v) => { update('currentlyInsured', v); clearErr('currentlyInsured'); }}
         options={yesNo}
+        error={localErrors.currentlyInsured}
       />
 
       {data.currentlyInsured === 'yes' && (
         <>
           <FormField
             id="currentInsurer" type="select" label={t('history.currentInsurer')}
-            value={data.currentInsurer} onChange={(v) => update('currentInsurer', v)}
+            value={data.currentInsurer} onChange={(v) => { update('currentInsurer', v); clearErr('currentInsurer'); }}
             options={FL_INSURERS}
+            error={localErrors.currentInsurer}
           />
           <FormField
             id="yearsInsured" type="select" label={t('history.yearsInsured')}
-            value={data.yearsInsured} onChange={(v) => update('yearsInsured', v)}
+            value={data.yearsInsured} onChange={(v) => { update('yearsInsured', v); clearErr('yearsInsured'); }}
             options={yearsInsuredOptions}
+            error={localErrors.yearsInsured}
           />
         </>
       )}
@@ -143,9 +209,8 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
           ← {t('nav.back')}
         </button>
         <button
-          onClick={onNext}
-          disabled={!canProceed}
-          className="px-6 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={handleNext}
+          className="px-6 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors shadow-sm"
         >
           {t('nav.next')} →
         </button>

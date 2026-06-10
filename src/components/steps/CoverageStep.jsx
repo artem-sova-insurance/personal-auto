@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import DynamicForm from '../DynamicForm';
 import { COVERAGE_FIELDS } from '../../config/formConfig';
 
@@ -113,9 +113,13 @@ function SmartRecommendations({ data }) {
 }
 
 export default function CoverageStep({ t, data, update, errors, onBack, onSubmit, isSubmitting, submitError }) {
-  // Auto-select collision + comprehensive with $1,000 deductible when liability is not state minimum
+  // Suggest collision + comprehensive with $1,000 deductible once, the first time
+  // a non-minimum liability limit is picked — never override an explicit user choice after that
+  const hasAutoApplied = useRef(false);
   useEffect(() => {
+    if (hasAutoApplied.current) return;
     if (data.liabilityLimit && data.liabilityLimit !== 'state_min') {
+      hasAutoApplied.current = true;
       if (data.hasCollision !== 'yes') update('hasCollision', 'yes');
       if (!data.collisionDeductible)   update('collisionDeductible', '1000');
       if (data.hasComprehensive !== 'yes') update('hasComprehensive', 'yes');

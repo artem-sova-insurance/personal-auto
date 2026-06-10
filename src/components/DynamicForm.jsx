@@ -43,6 +43,8 @@ function RenderField({ field, data, update, errors, t }) {
       required={field.required}
       helpText={helpText}
       error={errors?.[field.id]}
+      min={field.min}
+      max={field.max}
     />
   );
 }

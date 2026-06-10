@@ -1,4 +1,4 @@
-export default function FormField({ label, id, type = 'text', value, onChange, options, placeholder, required, helpText, error, className = '' }) {
+export default function FormField({ label, id, type = 'text', value, onChange, options, placeholder, required, helpText, error, className = '', min, max }) {
   const base = 'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-brand-600 transition-colors bg-white';
   const errCls = 'border-red-400 focus:ring-red-400 focus:border-red-400';
   const cls = `${base} ${error ? errCls : ''} ${className}`;
@@ -48,7 +48,7 @@ export default function FormField({ label, id, type = 'text', value, onChange, o
       )}
 
       {['text', 'email', 'tel', 'number', 'date'].includes(type) && (
-        <input id={id} type={type} value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cls} data-error={error ? true : undefined} />
+        <input id={id} type={type} value={value || ''} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} min={min} max={max} className={cls} data-error={error ? true : undefined} />
       )}
 
       {helpText && !error && <p className="mt-1 text-xs text-gray-400">{helpText}</p>}

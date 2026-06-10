@@ -4,6 +4,9 @@ import { VEHICLE_YEARS, USAGE_OPTIONS, ANNUAL_MILES_OPTIONS, OWNERSHIP_OPTIONS, 
 
 const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', lienholder: '' };
 
+const newId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random());
+const newVehicle = () => ({ ...EMPTY_VEHICLE, _id: newId() });
+
 async function lookupVin(vin) {
   const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`);
   if (!res.ok) throw new Error('API error');
@@ -25,7 +28,7 @@ function matchModel(make, nhtsaModel) {
   return models.find((m) => m.toLowerCase() === lower) || 'Other';
 }
 
-function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
+function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t, errors = {} }) {
   const [vinLoading, setVinLoading] = useState(false);
   const [vinError, setVinError] = useState('');
 
@@ -101,12 +104,12 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
             {vinLoading ? t('vehicle.vinLooking') : t('vehicle.vinAutofill')}
           </button>
         </div>
-        {vinError && <p className="mt-1.5 text-xs text-red-600">{vinError}</p>}
-        {!vinError && <p className="mt-1 text-xs text-gray-400">{t('vehicle.vinHint')}</p>}
+        {(vinError || errors.vin) && <p data-error="" className="mt-1.5 text-xs text-red-600">{vinError || errors.vin}</p>}
+        {!vinError && !errors.vin && <p className="mt-1 text-xs text-gray-400">{t('vehicle.vinHint')}</p>}
       </div>
 
       {/* Year */}
-      <FormField id={`year-${index}`} type="select" label={t('vehicle.year')} value={vehicle.year} onChange={(v) => upd('year', v)} options={yearOptions} required />
+      <FormField id={`year-${index}`} type="select" label={t('vehicle.year')} value={vehicle.year} onChange={(v) => upd('year', v)} options={yearOptions} required error={errors.year} />
 
       {/* Make & Model */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
@@ -114,12 +117,14 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
           id={`make-${index}`} type="select" label={t('vehicle.make')}
           value={vehicle.make} onChange={handleMakeChange}
           options={makeOptions} placeholder={t('vehicle.makePlaceholder')} required
+          error={errors.make}
         />
         <FormField
           id={`model-${index}`} type="select" label={t('vehicle.model')}
           value={vehicle.model} onChange={(v) => upd('model', v)}
           options={modelOptions} placeholder={vehicle.make ? t('vehicle.modelPlaceholder') : t('vehicle.modelFirst')}
           required
+          error={errors.model}
         />
       </div>
 
@@ -143,6 +148,7 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
             </label>
           ))}
         </div>
+        {errors.usage && <p data-error="" className="mt-1.5 text-xs text-red-600">{errors.usage}</p>}
         {(vehicle.usage === 'rideshare' || vehicle.usage === 'turo') && (
           <p className="mt-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             ⚠️ {vehicle.usage === 'rideshare' ? t('vehicle.rideshareWarn') : t('vehicle.turoWarn')}
@@ -170,6 +176,7 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
             </label>
           ))}
         </div>
+        {errors.annualMiles && <p data-error="" className="mt-1.5 text-xs text-red-600">{errors.annualMiles}</p>}
       </div>
 
       {/* Ownership */}
@@ -192,6 +199,7 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
             </label>
           ))}
         </div>
+        {errors.ownership && <p data-error="" className="mt-1.5 text-xs text-red-600">{errors.ownership}</p>}
         {vehicle.ownership === 'financed' && (
           <p className="mt-2 text-xs text-brand-700 bg-brand-50 border border-brand-100 rounded-lg px-3 py-2">
             💡 {t('vehicle.financedNote')}
@@ -212,20 +220,45 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t }) {
 }
 
 export default function VehiclesStep({ t, data, update, onNext, onBack }) {
+  const [vehicleErrors, setVehicleErrors] = useState([]);
+
   useEffect(() => {
     if (!data.vehicles || data.vehicles.length === 0) {
-      update('vehicles', [{ ...EMPTY_VEHICLE }]);
+      update('vehicles', [newVehicle()]);
     }
   }, []);
 
   const vehicles = data.vehicles || [];
-  const updateVehicle = (i, v) => { const n = [...vehicles]; n[i] = v; update('vehicles', n); };
-  const addVehicle    = () => update('vehicles', [...vehicles, { ...EMPTY_VEHICLE }]);
+  const updateVehicle = (i, v) => {
+    const n = [...vehicles]; n[i] = v; update('vehicles', n);
+    if (vehicleErrors[i] && Object.keys(vehicleErrors[i]).length > 0) {
+      const ne = [...vehicleErrors]; ne[i] = {}; setVehicleErrors(ne);
+    }
+  };
+  const addVehicle    = () => update('vehicles', [...vehicles, newVehicle()]);
   const removeVehicle = (i) => update('vehicles', vehicles.filter((_, idx) => idx !== i));
 
-  const canProceed = vehicles.length > 0 && vehicles.every(
-    (v) => v.year && v.make && v.model && v.vin && v.usage && v.annualMiles && v.ownership
-  );
+  const handleNext = () => {
+    const allErrors = vehicles.map((v) => {
+      const errs = {};
+      if (!v.year)             errs.year        = t('common.required') || 'Required';
+      if (!v.make)             errs.make        = t('common.required') || 'Required';
+      if (!v.model)            errs.model       = t('common.required') || 'Required';
+      if (!v.vin)              errs.vin         = t('common.required') || 'Required';
+      else if (v.vin.length !== 17) errs.vin    = t('vehicle.vinError') || 'VIN must be 17 characters';
+      if (!v.usage)            errs.usage       = t('common.required') || 'Required';
+      if (!v.annualMiles)      errs.annualMiles = t('common.required') || 'Required';
+      if (!v.ownership)        errs.ownership   = t('common.required') || 'Required';
+      return errs;
+    });
+    if (vehicles.length === 0 || allErrors.some((e) => Object.keys(e).length > 0)) {
+      setVehicleErrors(allErrors);
+      setTimeout(() => document.querySelector('[data-error]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+      return;
+    }
+    setVehicleErrors([]);
+    onNext();
+  };
 
   return (
     <div className="animate-fade-in">
@@ -233,7 +266,7 @@ export default function VehiclesStep({ t, data, update, onNext, onBack }) {
       <p className="text-sm text-gray-500 mb-6">{t('vehicle.subtitle')}</p>
 
       {vehicles.map((vehicle, i) => (
-        <VehicleCard key={i} index={i} vehicle={vehicle} onChange={(v) => updateVehicle(i, v)} onRemove={() => removeVehicle(i)} canRemove={vehicles.length > 1} t={t} />
+        <VehicleCard key={vehicle._id || i} index={i} vehicle={vehicle} errors={vehicleErrors[i] || {}} onChange={(v) => updateVehicle(i, v)} onRemove={() => removeVehicle(i)} canRemove={vehicles.length > 1} t={t} />
       ))}
 
       <button onClick={addVehicle} className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-300 text-brand-700 font-semibold text-sm hover:bg-brand-50 transition-colors mb-6">
@@ -244,7 +277,7 @@ export default function VehiclesStep({ t, data, update, onNext, onBack }) {
         <button onClick={onBack} className="px-5 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors">
           ← {t('nav.back')}
         </button>
-        <button onClick={onNext} disabled={!canProceed} className="px-6 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        <button onClick={handleNext} className="px-6 py-2.5 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition-colors shadow-sm">
           {t('nav.next')} →
         </button>
       </div>
