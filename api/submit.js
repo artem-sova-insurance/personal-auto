@@ -5,8 +5,8 @@
  * Required env vars:
  *   RESEND_API_KEY, EMAIL_FROM
  *   SLACK_WEBHOOK_URL
- *   AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME
  *   HUBSPOT_ACCESS_TOKEN (Private App token, pat-na1-...)
+ *   ZAPIER_WEBHOOK_URL
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -152,7 +152,6 @@ ${table([
 </div>`;
 }
 
-// Plain-text fallback (used for Airtable Full Summary field)
 function buildSummary(data) {
   const name = [data.firstName, data.lastName].filter(Boolean).join(' ') || '—';
   const addlCov = (data.additionalCoverages || []).map((c) => COV_LABELS[c] || c).join(', ') || 'None';
@@ -559,50 +558,6 @@ async function notifySlack(data) {
   if (!res.ok) throw new Error(`Slack error: ${res.status}`);
 }
 
-// ── Airtable ─────────────────────────────────────────────────────────────────
-
-async function saveToAirtable(data) {
-  const apiKey = process.env.AIRTABLE_API_KEY;
-  const baseId = process.env.AIRTABLE_BASE_ID;
-  const table  = process.env.AIRTABLE_TABLE_NAME || 'AutoSubmissions';
-  if (!apiKey || !baseId) throw new Error('Airtable env vars not set');
-
-  const name = [data.firstName, data.lastName].filter(Boolean).join(' ') || '';
-  const vehicles = (data.vehicles || []).map((v) => `${v.year} ${v.make} ${v.model}`).join('; ');
-
-  const fields = {
-    'Name':              name,
-    'Email':             data.email || '',
-    'Phone':             data.phone || '',
-    'State':             data.state || '',
-    'ZIP':               data.zipCode || '',
-    'Date of Birth':     data.dateOfBirth || '',
-    'Marital Status':    data.maritalStatus || '',
-    'Vehicles':          vehicles,
-    'Vehicle Count':     (data.vehicles || []).length,
-    'Only Driver':       data.isOnlyDriver || '',
-    'Additional Drivers':(data.additionalDrivers || []).length,
-    'Has Violations':    data.hasViolations || '',
-    'Has Accidents':     data.hasAccidents  || '',
-    'Currently Insured': data.currentlyInsured || '',
-    'Current Insurer':   data.currentInsurer || '',
-    'Liability Limit':   data.liabilityLimit || '',
-    'Has Collision':     data.hasCollision || '',
-    'Has Comprehensive': data.hasComprehensive || '',
-    'Additional Coverages': (data.additionalCoverages || []).join(', '),
-    'Language':          data.language || 'en',
-    'Full Summary':      buildSummary(data),
-    'Submitted At':      new Date().toISOString(),
-  };
-
-  const res = await fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
-  });
-  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(`Airtable error: ${JSON.stringify(b)}`); }
-}
-
 // ── HubSpot ───────────────────────────────────────────────────────────────────
 
 // Convert a date string (YYYY-MM-DD) to epoch ms at midnight UTC for HubSpot date fields
@@ -732,12 +687,11 @@ async function saveToHubspot(data) {
     ...buildPaProperties(data),
   };
 
-  console.log('HubSpot: creating contact for', data.email);
   const createRes  = await fetch('https://api.hubapi.com/crm/v3/objects/contacts', {
     method: 'POST', headers: hsHeaders, body: JSON.stringify({ properties }),
   });
   const createBody = await createRes.json().catch(() => ({}));
-  console.log('HubSpot create status:', createRes.status, JSON.stringify(createBody).slice(0, 300));
+  console.log('HubSpot create status:', createRes.status, createBody?.id || '');
 
   let contactId;
 
@@ -779,7 +733,7 @@ async function saveToHubspot(data) {
     ]);
 
     const noteBody = await noteRes.json().catch(() => ({}));
-    console.log('HubSpot note status:', noteRes.status, JSON.stringify(noteBody).slice(0, 200));
+    console.log('HubSpot note status:', noteRes.status, noteBody?.id || '');
   }
 }
 
@@ -882,8 +836,8 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
   });
 
   const dealBody = await dealRes.json().catch(() => ({}));
-  console.log('HubSpot deal status:', dealRes.status, JSON.stringify(dealBody).slice(0, 200));
-  if (!dealRes.ok) throw new Error(`HubSpot deal error ${dealRes.status}: ${JSON.stringify(dealBody)}`);
+  console.log('HubSpot deal status:', dealRes.status, dealBody?.id || '');
+  if (!dealRes.ok) throw new Error(`HubSpot deal error ${dealRes.status}`);
   return dealBody.id;
 }
 
@@ -1021,22 +975,20 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  const [emailErr, slackErr, airtableErr, hubspotErr, zapierErr] = await Promise.all([
+  const [emailErr, slackErr, hubspotErr, zapierErr] = await Promise.all([
     sendEmail(data).catch((e) => e),
     notifySlack(data).catch((e) => e),
-    saveToAirtable(data).catch((e) => e),
     saveToHubspot(data).catch((e) => e),
     notifyZapier(data).catch((e) => e),
   ]);
 
   // Log failures server-side only — never expose internals to the client
-  if (emailErr)    console.error('Email failed:', emailErr);
-  if (slackErr)    console.error('Slack failed:', slackErr);
-  if (airtableErr) console.error('Airtable failed:', airtableErr);
-  if (hubspotErr)  console.error('HubSpot failed:', hubspotErr);
-  if (zapierErr)   console.error('Zapier failed:', zapierErr);
+  if (emailErr)   console.error('Email failed:', emailErr);
+  if (slackErr)   console.error('Slack failed:', slackErr);
+  if (hubspotErr) console.error('HubSpot failed:', hubspotErr);
+  if (zapierErr)  console.error('Zapier failed:', zapierErr);
 
-  if (emailErr && slackErr && airtableErr && hubspotErr && zapierErr) {
+  if (emailErr && slackErr && hubspotErr && zapierErr) {
     return res.status(500).json({ message: 'Submission failed. Please try again.' });
   }
 
