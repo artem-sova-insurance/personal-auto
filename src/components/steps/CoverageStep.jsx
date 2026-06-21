@@ -145,6 +145,11 @@ export default function CoverageStep({ t, data, update, errors, onBack, onSubmit
         </div>
       )}
 
+      <p className="text-xs text-gray-400 leading-relaxed mb-4">
+        By submitting this form you consent to be contacted by SOVA Insurance by phone, text, or email regarding your inquiry. Msg &amp; data rates may apply. Reply STOP to opt out of texts. We do not sell your information.{' '}
+        <a href="https://sovainsurance.com/privacy-policy/" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Privacy Policy</a>
+      </p>
+
       <div className="flex items-center justify-between mt-6">
         <button onClick={onBack} disabled={isSubmitting} className="px-5 py-2.5 rounded-xl border-2 border-gray-200 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition-colors">
           ← {t('nav.back')}
