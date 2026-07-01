@@ -145,6 +145,14 @@ export default function CoverageStep({ t, data, update, errors, onBack, onSubmit
         </div>
       )}
 
+      <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-2 mb-4">
+        <p className="text-xs font-semibold text-gray-700">By submitting this application, you acknowledge and agree to the following:</p>
+        <p className="text-xs text-gray-600 leading-relaxed"><span className="font-semibold text-gray-700">Accuracy of Information.</span> I certify that the information provided in this application is true, complete, and accurate to the best of my knowledge. I understand that any misrepresentation or omission may result in the denial of coverage, cancellation of a policy, or refusal of a claim.</p>
+        <p className="text-xs text-gray-600 leading-relaxed"><span className="font-semibold text-gray-700">Use of Information.</span> I authorize SOVA Insurance and its appointed carriers to use the information provided in this application for underwriting, rating, and quoting purposes.</p>
+        <p className="text-xs text-gray-600 leading-relaxed"><span className="font-semibold text-gray-700">Consumer Report / Credit Disclosure.</span> In connection with this application, insurance carriers may obtain consumer reports, including credit-based insurance scores, from consumer reporting agencies. These reports may be used in the underwriting and rating of your policy. You have the right under the Fair Credit Reporting Act to be informed if information in a consumer report has been used against you, and to obtain a copy of the report from the reporting agency.</p>
+        <p className="text-xs text-gray-600 leading-relaxed"><span className="font-semibold text-gray-700">Florida Fraud Notice.</span> Any person who knowingly and with intent to injure, defraud, or deceive any insurer files a statement of claim or an application containing any false, incomplete, or misleading information is guilty of a felony of the third degree.</p>
+      </div>
+
       <p className="text-xs text-gray-400 leading-relaxed mb-4">
         By submitting this form you consent to be contacted by SOVA Insurance by phone, text, or email regarding your inquiry. Msg &amp; data rates may apply. Reply STOP to opt out of texts. We do not sell your information.{' '}
         <a href="https://sovainsurance.com/privacy-policy/" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Privacy Policy</a>
