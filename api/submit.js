@@ -298,6 +298,7 @@ function buildLeadEmailHtml(data) {
     ? `${data.vehicles?.[0]?.year || ''} ${data.vehicles?.[0]?.make || ''} ${data.vehicles?.[0]?.model || ''}`.trim()
     : `${vehicleCount} vehicles`;
   const vehicleSummary = esc(vehicleSummaryRaw);
+  const escapedSummary = buildSummary(data).replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   const row = (label, value) => `
     <tr>
@@ -362,6 +363,16 @@ function buildLeadEmailHtml(data) {
             ${row('Phone', data.phone)}
             ${row('Liability Limit', (data.liabilityLimit || '').replace(/_/g, '/').replace('state/min', 'State Minimum'))}
           </table>
+        </td>
+      </tr>
+
+      <!-- Full submission details -->
+      <tr>
+        <td style="padding:24px 40px 0;">
+          <div style="font-size:11px;font-weight:700;color:#3e6d6a;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:14px;">Details You Provided</div>
+          <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:16px;">
+            <pre style="margin:0;font-family:'SFMono-Regular',Consolas,monospace;font-size:12px;color:#374151;white-space:pre-wrap;line-height:1.6;">${escapedSummary}</pre>
+          </div>
         </td>
       </tr>
 
@@ -459,6 +470,7 @@ async function sendEmail(data) {
         to: [data.email],
         subject: `Your Auto Insurance Quote Request — Sova Insurance`,
         html: buildLeadEmailHtml(data),
+        text: `Hi ${data.firstName || 'there'},\n\nThank you for choosing Sova Insurance! We've received your personal auto insurance quote request and will be in touch within 1 business day.\n\nHere is what you submitted:\n\n${buildSummary(data)}\n\nQuestions? Call us at 954-780-6667 or email info@sovainsurance.com.\n\n— The Sova Insurance Team`,
       }),
     }).then(async (r) => {
       if (!r.ok) { const b = await r.json().catch(() => ({})); console.warn('Lead email failed:', JSON.stringify(b)); }
