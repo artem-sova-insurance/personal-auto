@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import FormField from '../FormField';
 import { VEHICLE_YEARS, USAGE_OPTIONS, ANNUAL_MILES_OPTIONS, OWNERSHIP_OPTIONS, CAR_MAKES, CAR_MODELS } from '../../config/formConfig';
 
-const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', lienholder: '' };
+const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', lienholder: '', garagingSameAsHome: null, garagingAddress: '' };
 
 const newId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random());
 const newVehicle = () => ({ ...EMPTY_VEHICLE, _id: newId() });
@@ -28,7 +28,7 @@ function matchModel(make, nhtsaModel) {
   return models.find((m) => m.toLowerCase() === lower) || 'Other';
 }
 
-function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t, errors = {} }) {
+function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t, errors = {}, homeAddress }) {
   const [vinLoading, setVinLoading] = useState(false);
   const [vinError, setVinError] = useState('');
 
@@ -215,6 +215,50 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t, errors 
       {(vehicle.ownership === 'financed' || vehicle.ownership === 'leased') && (
         <FormField id={`lienholder-${index}`} type="text" label={t('vehicle.lienholder')} value={vehicle.lienholder} onChange={(v) => upd('lienholder', v)} placeholder={t('vehicle.lienholderPlaceholder')} />
       )}
+
+      {/* Garaging Address */}
+      <div className="mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          {t('vehicle.garaging')} <span className="text-red-500 ml-1">*</span>
+        </label>
+        {homeAddress && <p className="text-xs text-gray-400 mb-2">{t('vehicle.garagingHomeHint')} {homeAddress}</p>}
+        <div className="flex flex-wrap gap-2">
+          {[{ value: 'yes', label: t('vehicle.garagingYes') }, { value: 'no', label: t('vehicle.garagingNo') }].map((o) => (
+            <label
+              key={o.value}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-pointer text-sm font-medium transition-all ${
+                vehicle.garagingSameAsHome === o.value
+                  ? 'bg-brand-600 border-brand-600 text-white'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-brand-500 hover:bg-brand-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name={`garaging-${index}`}
+                value={o.value}
+                checked={vehicle.garagingSameAsHome === o.value}
+                onChange={() => onChange({ ...vehicle, garagingSameAsHome: o.value, garagingAddress: o.value === 'yes' ? '' : vehicle.garagingAddress })}
+                className="sr-only"
+              />
+              {o.label}
+            </label>
+          ))}
+        </div>
+        {errors.garagingSameAsHome && <p data-error="" className="mt-1.5 text-xs text-red-600">{errors.garagingSameAsHome}</p>}
+      </div>
+
+      {vehicle.garagingSameAsHome === 'no' && (
+        <FormField
+          id={`garaging-address-${index}`}
+          type="text"
+          label={t('vehicle.garagingAddress')}
+          value={vehicle.garagingAddress}
+          onChange={(v) => upd('garagingAddress', v)}
+          placeholder={t('vehicle.garagingAddressPlaceholder')}
+          required
+          error={errors.garagingAddress}
+        />
+      )}
     </div>
   );
 }
@@ -249,6 +293,8 @@ export default function VehiclesStep({ t, data, update, onNext, onBack }) {
       if (!v.usage)            errs.usage       = t('common.required') || 'Required';
       if (!v.annualMiles)      errs.annualMiles = t('common.required') || 'Required';
       if (!v.ownership)        errs.ownership   = t('common.required') || 'Required';
+      if (!v.garagingSameAsHome) errs.garagingSameAsHome = t('common.required') || 'Required';
+      if (v.garagingSameAsHome === 'no' && !v.garagingAddress?.trim()) errs.garagingAddress = t('common.required') || 'Required';
       return errs;
     });
     if (vehicles.length === 0 || allErrors.some((e) => Object.keys(e).length > 0)) {
@@ -266,7 +312,7 @@ export default function VehiclesStep({ t, data, update, onNext, onBack }) {
       <p className="text-sm text-gray-500 mb-6">{t('vehicle.subtitle')}</p>
 
       {vehicles.map((vehicle, i) => (
-        <VehicleCard key={vehicle._id || i} index={i} vehicle={vehicle} errors={vehicleErrors[i] || {}} onChange={(v) => updateVehicle(i, v)} onRemove={() => removeVehicle(i)} canRemove={vehicles.length > 1} t={t} />
+        <VehicleCard key={vehicle._id || i} index={i} vehicle={vehicle} errors={vehicleErrors[i] || {}} onChange={(v) => updateVehicle(i, v)} onRemove={() => removeVehicle(i)} canRemove={vehicles.length > 1} t={t} homeAddress={data.address} />
       ))}
 
       <button onClick={addVehicle} className="w-full py-2.5 rounded-xl border-2 border-dashed border-brand-300 text-brand-700 font-semibold text-sm hover:bg-brand-50 transition-colors mb-6">

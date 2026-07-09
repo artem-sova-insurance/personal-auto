@@ -85,6 +85,7 @@ function buildHubSpotNote(data) {
       v.annualMiles ? `Miles: ${esc(MILES_LABELS[v.annualMiles] || v.annualMiles)}` : null,
       v.ownership ? `Ownership: ${esc(OWNERSHIP_LABELS[v.ownership] || v.ownership)}` : null,
       v.lienholder ? `Lender: ${esc(v.lienholder)}` : null,
+      v.garagingSameAsHome === 'yes' ? 'Garaged: Same as home' : v.garagingSameAsHome === 'no' ? `Garaged: ${esc(v.garagingAddress) || '?'}` : null,
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
     return row(label, val);
   }).join('');
@@ -157,7 +158,7 @@ function buildSummary(data) {
   const addlCov = (data.additionalCoverages || []).map((c) => COV_LABELS[c] || c).join(', ') || 'None';
 
   const vehicleLines = (data.vehicles || []).map((v, i) =>
-    `  Vehicle ${i + 1}: ${v.year || '—'} ${v.make || '—'} ${v.model || '—'}${v.vin ? ` | VIN: ${v.vin}` : ''} | Use: ${USAGE_LABELS[v.usage] || v.usage || '—'} | Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles || '—'} | Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership || '—'}${v.lienholder ? ` | Lender: ${v.lienholder}` : ''}`
+    `  Vehicle ${i + 1}: ${v.year || '—'} ${v.make || '—'} ${v.model || '—'}${v.vin ? ` | VIN: ${v.vin}` : ''} | Use: ${USAGE_LABELS[v.usage] || v.usage || '—'} | Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles || '—'} | Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership || '—'}${v.lienholder ? ` | Lender: ${v.lienholder}` : ''} | Garaged: ${v.garagingSameAsHome === 'yes' ? 'Same as home' : v.garagingSameAsHome === 'no' ? (v.garagingAddress || '—') : '—'}`
   ).join('\n') || '  None listed';
 
   const driverLines = data.isOnlyDriver === 'no' && (data.additionalDrivers || []).length
@@ -492,6 +493,8 @@ async function notifySlack(data) {
     if (v.usage)      parts.push(`Use: ${v.usage}`);
     if (v.annualMiles) parts.push(`Miles: ${v.annualMiles}`);
     if (v.ownership)  parts.push(`Ownership: ${v.ownership}`);
+    if (v.garagingSameAsHome === 'yes') parts.push('Garaged: Same as home');
+    else if (v.garagingSameAsHome === 'no') parts.push(`Garaged: ${v.garagingAddress || '?'}`);
     return parts.join(' · ');
   }).join('\n') || '—';
 

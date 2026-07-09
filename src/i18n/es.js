@@ -87,6 +87,12 @@ const es = {
     leasedNote: 'Los arrendamientos requieren cobertura completa.',
     lienholder: 'Nombre del Prestamista',
     lienholderPlaceholder: 'ej. Chase Auto Finance',
+    garaging: 'Dirección de Estacionamiento',
+    garagingHomeHint: 'Su dirección particular registrada:',
+    garagingYes: 'Igual que mi dirección particular',
+    garagingNo: 'Estacionado en otro lugar',
+    garagingAddress: '¿Dónde se estaciona este vehículo durante la noche?',
+    garagingAddressPlaceholder: '123 Main St, Hollywood, FL 33021',
     removeVehicle: 'Eliminar ✕',
   },
   drivers: {

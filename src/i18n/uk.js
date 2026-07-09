@@ -87,6 +87,12 @@ const uk = {
     leasedNote: 'Лізинг вимагає повного покриття.',
     lienholder: 'Назва банку/лізингодавця',
     lienholderPlaceholder: 'наприклад, Chase Auto Finance',
+    garaging: 'Адреса стоянки автомобіля',
+    garagingHomeHint: 'Ваша домашня адреса в анкеті:',
+    garagingYes: 'Збігається з моєю домашньою адресою',
+    garagingNo: 'Стоїть в іншому місці',
+    garagingAddress: 'Де цей автомобіль паркується на ніч?',
+    garagingAddressPlaceholder: 'вул. Головна 123, Голлівуд, FL 33021',
     removeVehicle: 'Видалити ✕',
   },
   drivers: {
