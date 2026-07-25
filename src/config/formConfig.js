@@ -117,16 +117,51 @@ export const RELATIONSHIP_OPTIONS = [
   { value: 'other',    label: 'Other' },
 ];
 
-// ── Violation types ───────────────────────────────────────────────────────────
+// ── Violation types (Tickets / Violations category) ────────────────────────────
 export const VIOLATION_TYPES = [
-  { value: 'speeding_minor',   label: 'Speeding (1–15 mph over)' },
-  { value: 'speeding_major',   label: 'Speeding (16+ mph over)' },
-  { value: 'reckless',         label: 'Reckless driving' },
-  { value: 'dui',              label: 'DUI / DWI' },
-  { value: 'at_fault',         label: 'At-fault accident' },
-  { value: 'failure_to_stop',  label: 'Failure to stop' },
-  { value: 'distracted',       label: 'Distracted driving' },
-  { value: 'other',            label: 'Other moving violation' },
+  { value: 'auto_theft_felony',             label: 'Auto Theft / Felony' },
+  { value: 'careless_improper',             label: 'Careless or Improper Operation of Vehicle' },
+  { value: 'defective_equipment',           label: 'Defective Equipment' },
+  { value: 'disregard_traffic_device',      label: 'Disregard Traffic Device or Sign' },
+  { value: 'drag_racing',                   label: 'Drag Racing' },
+  { value: 'dui',                           label: 'Driving Under the Influence' },
+  { value: 'equipment_violation',           label: 'Equipment Violations' },
+  { value: 'failure_report_accident',       label: 'Failure to Report Accident' },
+  { value: 'false_report_perjury',          label: 'False Report to Official / Perjury' },
+  { value: 'failure_to_yield',              label: 'Failure to Yield' },
+  { value: 'flee_elude_police',             label: 'Flee or Elude Police' },
+  { value: 'following_too_close',           label: 'Following Too Close' },
+  { value: 'homicide_assault_vehicle',       label: 'Homicide or Assault with Vehicle' },
+  { value: 'improper_backing',              label: 'Improper Backing' },
+  { value: 'improper_passing',              label: 'Improper Passing' },
+  { value: 'improper_turn',                 label: 'Improper Turn / U-Turn' },
+  { value: 'license_credentials_violation', label: 'License or Credentials Violation' },
+  { value: 'leaving_scene',                 label: 'Leaving the Scene' },
+  { value: 'minor_moving_violation',        label: 'Minor Moving Violations' },
+  { value: 'open_bottle_container',         label: 'Open Bottle or Container' },
+  { value: 'operate_without_consent',       label: "Operate without Owner's Consent" },
+  { value: 'passing_school_bus',            label: 'Passing School Bus' },
+  { value: 'reckless',                      label: 'Reckless Driving' },
+  { value: 'refusal_to_test',               label: 'Refusal to Test' },
+  { value: 'safety_violation',              label: 'Safety Violation' },
+  { value: 'speeding_15_or_less',           label: 'Speeding – 15 MPH or Less' },
+  { value: 'speeding_16_or_more',           label: 'Speeding – 16 MPH or Greater' },
+  { value: 'wrong_side_road',               label: 'Wrong Side of Road' },
+  { value: 'other',                         label: 'Other moving violation' },
+];
+
+// ── Accident types (Common Incidents + Claims categories) ──────────────────────
+export const ACCIDENT_TYPES = [
+  { value: 'at_fault_collision',     label: 'Accident – At Fault' },
+  { value: 'not_at_fault_collision', label: 'Accident – Not At Fault' },
+  { value: 'weather',                label: 'Acts of Nature / Weather Related' },
+  { value: 'glass',                  label: 'Glass Only or Windshield Damage' },
+  { value: 'hit_animal',             label: 'Hit an Animal' },
+  { value: 'object_fell',            label: 'Object Fell on Vehicle (Not Weather Related)' },
+  { value: 'theft_vandalism_fire',   label: 'Theft / Vandalism / Fire' },
+  { value: 'pothole',                label: 'Damage From Pothole' },
+  { value: 'comp_under1k',           label: 'Comprehensive Claim – Under $1,000' },
+  { value: 'comp_over1k',            label: 'Comprehensive Claim – $1,000 or More' },
 ];
 
 // ── Contact step fields ───────────────────────────────────────────────────────

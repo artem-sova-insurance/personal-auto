@@ -28,6 +28,53 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
+// Label lookup for the categorized incident-type dropdowns (violations + accidents)
+const VIOLATION_TYPE_LABELS = {
+  auto_theft_felony:             'Auto Theft / Felony',
+  careless_improper:             'Careless or Improper Operation of Vehicle',
+  defective_equipment:           'Defective Equipment',
+  disregard_traffic_device:      'Disregard Traffic Device or Sign',
+  drag_racing:                   'Drag Racing',
+  dui:                           'Driving Under the Influence',
+  equipment_violation:           'Equipment Violations',
+  failure_report_accident:       'Failure to Report Accident',
+  false_report_perjury:          'False Report to Official / Perjury',
+  failure_to_yield:              'Failure to Yield',
+  flee_elude_police:             'Flee or Elude Police',
+  following_too_close:           'Following Too Close',
+  homicide_assault_vehicle:      'Homicide or Assault with Vehicle',
+  improper_backing:              'Improper Backing',
+  improper_passing:              'Improper Passing',
+  improper_turn:                 'Improper Turn / U-Turn',
+  license_credentials_violation: 'License or Credentials Violation',
+  leaving_scene:                 'Leaving the Scene',
+  minor_moving_violation:        'Minor Moving Violations',
+  open_bottle_container:         'Open Bottle or Container',
+  operate_without_consent:       "Operate without Owner's Consent",
+  passing_school_bus:            'Passing School Bus',
+  reckless:                      'Reckless Driving',
+  refusal_to_test:               'Refusal to Test',
+  safety_violation:              'Safety Violation',
+  speeding_15_or_less:           'Speeding – 15 MPH or Less',
+  speeding_16_or_more:           'Speeding – 16 MPH or Greater',
+  wrong_side_road:               'Wrong Side of Road',
+  other:                         'Other moving violation',
+};
+const ACCIDENT_TYPE_LABELS = {
+  at_fault_collision:     'Accident – At Fault',
+  not_at_fault_collision: 'Accident – Not At Fault',
+  weather:                'Acts of Nature / Weather Related',
+  glass:                  'Glass Only or Windshield Damage',
+  hit_animal:             'Hit an Animal',
+  object_fell:            'Object Fell on Vehicle (Not Weather Related)',
+  theft_vandalism_fire:   'Theft / Vandalism / Fire',
+  pothole:                'Damage From Pothole',
+  comp_under1k:           'Comprehensive Claim – Under $1,000',
+  comp_over1k:            'Comprehensive Claim – $1,000 or More',
+};
+const violationTypeLabel = (v) => VIOLATION_TYPE_LABELS[v] || fmt(v);
+const accidentTypeLabel  = (v) => ACCIDENT_TYPE_LABELS[v] || fmt(v);
+
 const OCCUPATION_LABELS = {
   accountant: 'Accountant / CPA', attorney: 'Attorney / Lawyer', business_owner: 'Business Owner',
   construction: 'Construction Worker', customer_service: 'Customer Service', delivery_driver: 'Delivery Driver',
@@ -100,12 +147,12 @@ function buildHubSpotNote(data) {
 
   // Violations
   const violRows = data.hasViolations === 'yes' && (data.violations || []).length
-    ? data.violations.map((v, i) => row(`Violation ${i + 1}`, `${v.month}/${v.year} — ${v.type || '—'}`)).join('')
+    ? data.violations.map((v, i) => row(`Violation ${i + 1}`, `${v.month}/${v.year} — ${v.type ? esc(violationTypeLabel(v.type)) : '—'}`)).join('')
     : row('Violations', 'None');
 
   // Accidents
   const accRows = data.hasAccidents === 'yes' && (data.accidents || []).length
-    ? data.accidents.map((a, i) => row(`Accident ${i + 1}`, `${a.month}/${a.year} — At fault: ${a.atFault || '—'}`)).join('')
+    ? data.accidents.map((a, i) => row(`Accident ${i + 1}`, `${a.month}/${a.year} — ${a.type ? esc(accidentTypeLabel(a.type)) : '—'}${a.atFault ? ` | At fault: ${esc(a.atFault)}` : ''}`)).join('')
     : row('Accidents', 'None');
 
   // Additional coverages
@@ -168,11 +215,11 @@ function buildSummary(data) {
     : '  Primary driver only';
 
   const violationLines = data.hasViolations === 'yes' && (data.violations || []).length
-    ? data.violations.map((v, i) => `  ${i + 1}. ${v.month}/${v.year} — ${v.type || '—'}`).join('\n')
+    ? data.violations.map((v, i) => `  ${i + 1}. ${v.month}/${v.year} — ${v.type ? violationTypeLabel(v.type) : '—'}`).join('\n')
     : '  None';
 
   const accidentLines = data.hasAccidents === 'yes' && (data.accidents || []).length
-    ? data.accidents.map((a, i) => `  ${i + 1}. ${a.month}/${a.year} — At fault: ${a.atFault || '—'}`).join('\n')
+    ? data.accidents.map((a, i) => `  ${i + 1}. ${a.month}/${a.year} — ${a.type ? accidentTypeLabel(a.type) : '—'}${a.atFault ? ` | At fault: ${a.atFault}` : ''}`).join('\n')
     : '  None';
 
   return [

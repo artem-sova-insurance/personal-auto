@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import FormField from '../FormField';
-import { VIOLATION_TYPES, INCIDENT_YEARS, MONTHS, FL_INSURERS } from '../../config/formConfig';
+import { VIOLATION_TYPES, ACCIDENT_TYPES, INCIDENT_YEARS, MONTHS, FL_INSURERS } from '../../config/formConfig';
 
 const EMPTY_VIOLATION = { month: '', year: '', type: '' };
-const EMPTY_ACCIDENT  = { month: '', year: '', atFault: '' };
+const EMPTY_ACCIDENT  = { month: '', year: '', type: '', atFault: '' };
 
 function IncidentRow({ item, index, onChange, onRemove, typeOptions, typeLabel, atFaultLabel, t, errors = {} }) {
   const upd = (f, v) => onChange({ ...item, [f]: v });
@@ -44,6 +44,7 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
   const remAccident  = (i)    => update('accidents', accidents.filter((_, idx) => idx !== i));
 
   const violTypeOptions = VIOLATION_TYPES.map((o) => ({ value: o.value, label: t(`history.viol_${o.value}`) || o.label }));
+  const accTypeOptions  = ACCIDENT_TYPES.map((o) => ({ value: o.value, label: t(`history.acc_${o.value}`) || o.label }));
   const yesNo = [{ value: 'yes', label: t('common.yes') }, { value: 'no', label: t('common.no') }];
 
   const yearsInsuredOptions = [
@@ -76,6 +77,7 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
           const e = {};
           if (!a.month)   e.month   = req;
           if (!a.year)    e.year    = req;
+          if (!a.type)    e.type    = req;
           if (!a.atFault) e.atFault = req;
           return e;
         })
@@ -163,6 +165,7 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
                 if (accidentErrors[i]) { const ne = [...accidentErrors]; ne[i] = {}; setLocalErrors((p) => ({ ...p, accidentErrors: ne })); }
               }}
               onRemove={() => remAccident(i)}
+              typeOptions={accTypeOptions} typeLabel={t('history.accidentType')}
               atFaultLabel={t('history.atFault')} t={t} />
           ))}
           <button onClick={addAccident} className="text-sm font-semibold text-brand-700 hover:text-brand-900 hover:bg-brand-50 px-3 py-1.5 rounded-lg transition-colors">
