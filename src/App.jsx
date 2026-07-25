@@ -42,6 +42,7 @@ const INITIAL_DATA = {
   currentlyInsured: null,
   currentInsurer: '',
   yearsInsured: '',
+  currentMonthlyPremium: '',
   // Coverage
   liabilityLimit: '',
   hasCollision: null,

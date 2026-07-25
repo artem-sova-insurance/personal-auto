@@ -84,8 +84,9 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
       : [];
 
     if (data.currentlyInsured === 'yes') {
-      if (!data.currentInsurer) errs.currentInsurer = req;
-      if (!data.yearsInsured)   errs.yearsInsured   = req;
+      if (!data.currentInsurer)         errs.currentInsurer         = req;
+      if (!data.yearsInsured)           errs.yearsInsured           = req;
+      if (!data.currentMonthlyPremium)  errs.currentMonthlyPremium  = req;
     }
 
     const hasRowErrors = violationErrors.some((e) => Object.keys(e).length > 0)
@@ -197,6 +198,12 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
             value={data.yearsInsured} onChange={(v) => { update('yearsInsured', v); clearErr('yearsInsured'); }}
             options={yearsInsuredOptions}
             error={localErrors.yearsInsured}
+          />
+          <FormField
+            id="currentMonthlyPremium" type="number" label={t('history.currentMonthlyPremium')}
+            value={data.currentMonthlyPremium} onChange={(v) => { update('currentMonthlyPremium', v); clearErr('currentMonthlyPremium'); }}
+            placeholder="150"
+            error={localErrors.currentMonthlyPremium}
           />
         </>
       )}

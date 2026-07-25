@@ -185,7 +185,7 @@ ${h('📋 Driving History')}
 ${table([
   violRows,
   accRows,
-  row('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${esc(data.currentInsurer) || '?'} (${esc(data.yearsInsured) || '?'})` : 'No'),
+  row('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${esc(data.currentInsurer) || '?'} (${esc(data.yearsInsured) || '?'}) — $${esc(data.currentMonthlyPremium) || '?'}/mo` : 'No'),
 ].join(''))}
 
 ${h('🛡️ Coverage Preferences')}
@@ -226,7 +226,7 @@ function buildSummary(data) {
     `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Marital: ${fmt(data.maritalStatus)} | Occupation: ${occLabel(data.occupation)}\nState: ${fmt(data.state)} ${fmt(data.zipCode)} | Address: ${fmt(data.address)}\nLicense: ${fmt(data.licenseNumber)} (${fmt(data.licenseState)})`,
     `VEHICLES\n${vehicleLines}`,
     `DRIVERS\nOnly Driver: ${fmt(data.isOnlyDriver)}\n${driverLines}`,
-    `HISTORY\nViolations: ${fmt(data.hasViolations)}\n${violationLines}\nAccidents: ${fmt(data.hasAccidents)}\n${accidentLines}\nInsured: ${fmt(data.currentlyInsured)} — ${fmt(data.currentInsurer)} (${fmt(data.yearsInsured)})`,
+    `HISTORY\nViolations: ${fmt(data.hasViolations)}\n${violationLines}\nAccidents: ${fmt(data.hasAccidents)}\n${accidentLines}\nInsured: ${fmt(data.currentlyInsured)} — ${fmt(data.currentInsurer)} (${fmt(data.yearsInsured)}) — $${fmt(data.currentMonthlyPremium)}/mo`,
     `COVERAGE\nLiability: ${LIABILITY_LABELS[data.liabilityLimit] || data.liabilityLimit || '—'}\nCollision: ${fmt(data.hasCollision)}${data.hasCollision === 'yes' ? ` | Ded: ${fmtDeductible(data.collisionDeductible)}` : ''}\nComprehensive: ${fmt(data.hasComprehensive)}${data.hasComprehensive === 'yes' ? ` | Ded: ${fmtDeductible(data.comprehensiveDeductible)}` : ''}\nAdditional: ${addlCov}\nNotes: ${fmt(data.additionalNotes)}`,
   ].join('\n\n──────────────────────────────────\n\n');
 }
@@ -597,7 +597,7 @@ async function notifySlack(data) {
     // Drivers & History
     { type: 'section', fields: [
       f('Drivers',          driverLines),
-      f('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${data.currentInsurer || '?'} (${data.yearsInsured || '?'})` : 'No'),
+      f('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${data.currentInsurer || '?'} (${data.yearsInsured || '?'}) — $${data.currentMonthlyPremium || '?'}/mo` : 'No'),
     ]},
   ];
 
@@ -933,6 +933,7 @@ async function notifyZapier(data) {
     currently_insured:      data.currentlyInsured || '',
     current_insurer:        data.currentInsurer  || '',
     years_insured:          data.yearsInsured    || '',
+    current_monthly_premium: data.currentMonthlyPremium || '',
 
     // ── Vehicles ─────────────────────────────────────────────────────────────
     vehicle_count: vehicles.length,
