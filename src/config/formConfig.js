@@ -173,7 +173,7 @@ export const CONTACT_FIELDS = [
       { id: 'lastName',  type: 'text', label: 'Last Name',  placeholder: 'Smith', required: true },
     ],
   },
-  { id: 'dateOfBirth', type: 'date', label: 'Date of Birth', required: true, max: new Date().toISOString().slice(0, 10) },
+  { id: 'dateOfBirth', type: 'date', label: 'Date of Birth', helpText: 'Format: MM/DD/YYYY', required: true, max: new Date().toISOString().slice(0, 10) },
   {
     id: 'maritalStatus', type: 'radio', labelKey: 'common.maritalStatus', label: 'Marital Status', required: true,
     options: [

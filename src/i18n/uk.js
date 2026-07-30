@@ -104,6 +104,7 @@ const uk = {
     firstName: "Ім'я",
     lastName: 'Прізвище',
     dateOfBirth: 'Дата народження',
+    dateOfBirthHint: 'Формат: ММ/ДД/РРРР',
     relationship: 'Відношення до вас',
     rel_spouse: 'Чоловік/дружина',
     rel_child: 'Дитина',

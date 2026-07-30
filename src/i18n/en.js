@@ -106,6 +106,7 @@ const en = {
     firstName: 'First Name',
     lastName: 'Last Name',
     dateOfBirth: 'Date of Birth',
+    dateOfBirthHint: 'Format: MM/DD/YYYY',
     relationship: 'Relationship to you',
     rel_spouse: 'Spouse / Partner',
     rel_child: 'Child',

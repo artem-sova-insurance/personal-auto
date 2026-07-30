@@ -104,6 +104,7 @@ const ru = {
     firstName: 'Имя',
     lastName: 'Фамилия',
     dateOfBirth: 'Дата рождения',
+    dateOfBirthHint: 'Формат: ММ/ДД/ГГГГ',
     relationship: 'Отношение к вам',
     rel_spouse: 'Супруг/супруга',
     rel_child: 'Ребёнок',

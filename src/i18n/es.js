@@ -104,6 +104,7 @@ const es = {
     firstName: 'Nombre',
     lastName: 'Apellido',
     dateOfBirth: 'Fecha de Nacimiento',
+    dateOfBirthHint: 'Formato: MM/DD/AAAA',
     relationship: 'Relación con usted',
     rel_spouse: 'Cónyuge / Pareja',
     rel_child: 'Hijo/a',

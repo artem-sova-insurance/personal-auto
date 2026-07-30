@@ -54,7 +54,7 @@ function DriverCard({ index, driver, onChange, onRemove, t, errors = {} }) {
         <FormField id={`dln-${index}`} type="text" label={t('drivers.lastName')}  value={driver.lastName}  onChange={(v) => upd('lastName', v)}  placeholder="Smith" required error={errors.lastName} />
       </div>
 
-      <FormField id={`ddob-${index}`} type="date"   label={t('drivers.dateOfBirth')}  value={driver.dateOfBirth}  onChange={(v) => upd('dateOfBirth', v)}  max={TODAY} required error={errors.dateOfBirth} />
+      <FormField id={`ddob-${index}`} type="date"   label={t('drivers.dateOfBirth')} helpText={t('drivers.dateOfBirthHint')}  value={driver.dateOfBirth}  onChange={(v) => upd('dateOfBirth', v)}  max={TODAY} required error={errors.dateOfBirth} />
       <FormField id={`drel-${index}`} type="select" label={t('drivers.relationship')} value={driver.relationship} onChange={(v) => upd('relationship', v)} options={relOptions} required error={errors.relationship} />
 
       {/* License info */}
