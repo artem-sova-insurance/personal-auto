@@ -801,51 +801,42 @@ async function saveToHubspot(data) {
 
 // ── HubSpot Deal creation ─────────────────────────────────────────────────────
 
+// Known-good IDs for the "New Business (Auto)" pipeline, confirmed directly
+// against the HubSpot account on 2026-08-03 — it happens to be HubSpot's
+// "default" pipeline. Used as the immediate default and as a fallback if the
+// by-name lookup below ever fails (e.g. the Private App's crm.objects.deals.read
+// scope gets revoked) — every auto lead must land here, never in the Commercial
+// pipeline.
+const AUTO_PIPELINE_ID = 'default';
+const AUTO_QUOTING_STAGE_ID = '1802529492';
+
 async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
-  // Fetch deal pipelines to find "Sales Pipeline" → "Quoting" stage
-  let pipelineId = 'default';
-  let stageId = null;
+  // Resolve pipeline + stage — always target "New Business (Auto)" by name;
+  // matching on label rather than a hardcoded ID keeps this correct if the
+  // pipeline is ever recreated (which changes its ID) without a code change.
+  let pipelineId = AUTO_PIPELINE_ID;
+  let stageId = AUTO_QUOTING_STAGE_ID;
 
   try {
-    // Try /crm/v3/pipelines/deals which should return pipelines with embedded stages
     const plRes  = await fetch('https://api.hubapi.com/crm/v3/pipelines/deals', { headers: hsHeaders });
     const plBody = await plRes.json().catch(() => ({}));
     const pipelines = plBody.results || [];
 
-    const preferred = pipelines.find((p) => p.label?.toLowerCase().includes('sales'))
-      || pipelines.find((p) => p.id === 'default')
-      || pipelines[0];
+    const auto = pipelines.find((p) => p.label?.trim().toLowerCase() === 'new business (auto)')
+      || pipelines.find((p) => p.label?.toLowerCase().includes('auto'));
 
-    if (preferred) {
-      pipelineId = preferred.id;
-      // Stages may be nested as .stages or .stageOrder — log what we get
-      const stages = preferred.stages || preferred.stageOrder || [];
-      console.log(`HubSpot pipeline stages (list): ${JSON.stringify(stages).slice(0, 200)}`);
+    if (auto) {
+      pipelineId = auto.id;
+      const stages = auto.stages || auto.stageOrder || [];
       const quotingStage = stages.find((s) => (s.label || s.displayName || '').toLowerCase().includes('quot'));
-      stageId = (quotingStage || stages[0])?.id ?? null;
-    }
-
-    // If stages weren't in the list, fetch the single pipeline record
-    if (!stageId) {
-      const spRes  = await fetch(`https://api.hubapi.com/crm/v3/pipelines/deals/${pipelineId}`, { headers: hsHeaders });
-      const spBody = await spRes.json().catch(() => ({}));
-      // HubSpot sometimes nests stages under .stages, sometimes under .stageOrder
-      const stages = spBody.stages || spBody.stageOrder || [];
-      console.log(`HubSpot pipeline stages (single): ${JSON.stringify(stages).slice(0, 200)}`);
-      const quotingStage = stages.find((s) => (s.label || s.displayName || '').toLowerCase().includes('quot'));
-      stageId = (quotingStage || stages[0])?.id ?? null;
+      stageId = (quotingStage || stages[0])?.id ?? AUTO_QUOTING_STAGE_ID;
+    } else {
+      console.warn('HubSpot: "New Business (Auto)" pipeline not found by name — using known fallback IDs.');
     }
 
     console.log(`HubSpot deal: pipeline=${pipelineId}, stage=${stageId}`);
   } catch (e) {
-    console.warn('HubSpot pipeline lookup failed:', e.message);
-  }
-
-  // If pipeline lookup returned no stages (happens on some HS accounts),
-  // fall back to the first known stage ID for the default pipeline.
-  if (!stageId) {
-    stageId = '1802529492'; // first stage of default pipeline (confirmed from deal records)
-    console.log(`HubSpot deal: using hardcoded fallback stage ${stageId}`);
+    console.warn('HubSpot pipeline lookup failed, using known fallback IDs:', e.message);
   }
 
   // Close date: 14 days from now at midnight UTC
