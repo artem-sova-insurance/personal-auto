@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import FormField from '../FormField';
 import { VEHICLE_YEARS, USAGE_OPTIONS, ANNUAL_MILES_OPTIONS, OWNERSHIP_OPTIONS, CAR_MAKES, CAR_MODELS } from '../../config/formConfig';
 
-const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', lienholder: '', garagingSameAsHome: null, garagingAddress: '' };
+const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', yearsOwned: '', lienholder: '', garagingSameAsHome: null, garagingAddress: '' };
+
+const YEARS_OWNED_OPTIONS = [
+  { value: 'under1', label: 'Less than 1 year' },
+  { value: '1to2',   label: '1–2 years' },
+  { value: '3to5',   label: '3–5 years' },
+  { value: 'over5',  label: 'More than 5 years' },
+];
 
 const newId = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random());
 const newVehicle = () => ({ ...EMPTY_VEHICLE, _id: newId() });
@@ -212,6 +219,13 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t, errors 
         )}
       </div>
 
+      <FormField
+        id={`years-owned-${index}`} type="select" label={t('vehicle.yearsOwned')}
+        value={vehicle.yearsOwned} onChange={(v) => upd('yearsOwned', v)}
+        options={YEARS_OWNED_OPTIONS} required
+        error={errors.yearsOwned}
+      />
+
       {(vehicle.ownership === 'financed' || vehicle.ownership === 'leased') && (
         <FormField id={`lienholder-${index}`} type="text" label={t('vehicle.lienholder')} value={vehicle.lienholder} onChange={(v) => upd('lienholder', v)} placeholder={t('vehicle.lienholderPlaceholder')} />
       )}
@@ -296,6 +310,7 @@ export default function VehiclesStep({ t, data, update, onNext, onBack }) {
       if (!v.usage)            errs.usage       = t('common.required') || 'Required';
       if (!v.annualMiles)      errs.annualMiles = t('common.required') || 'Required';
       if (!v.ownership)        errs.ownership   = t('common.required') || 'Required';
+      if (!v.yearsOwned)       errs.yearsOwned  = t('common.required') || 'Required';
       if (!v.garagingSameAsHome) errs.garagingSameAsHome = t('common.required') || 'Required';
       if (v.garagingSameAsHome === 'no' && !v.garagingAddress?.trim()) errs.garagingAddress = t('common.required') || 'Required';
       return errs;

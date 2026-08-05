@@ -90,6 +90,30 @@ const OCCUPATION_LABELS = {
 };
 const occLabel = (v) => OCCUPATION_LABELS[v] || v || '—';
 
+const INDUSTRY_LABELS = {
+  agriculture_forestry_fishing: 'Agriculture / Forestry / Fishing', art_design_media: 'Art / Design / Media',
+  banking_finance_real_estate: 'Banking / Finance / Real Estate', business_sales_office: 'Business / Sales / Office',
+  construction_energy_trades: 'Construction / Energy Trades', education_library: 'Education / Library',
+  engineer_architect_science: 'Engineer / Architect / Science / Math', government: 'Government / Public Administration',
+  healthcare_medical: 'Healthcare / Medical', hospitality_food_service: 'Hospitality / Food Service',
+  legal: 'Legal', manufacturing_production: 'Manufacturing / Production', military: 'Military',
+  personal_care_service: 'Personal Care / Service', protective_service: 'Protective Service (Police / Fire / Security)',
+  retail: 'Retail', technology_it: 'Technology / IT', transportation_logistics: 'Transportation / Logistics',
+  retired: 'Retired', disabled: 'Disabled', unemployed: 'Unemployed', student: 'Student', homemaker: 'Homemaker', other: 'Other',
+};
+const industryLabel = (v) => INDUSTRY_LABELS[v] || v || '—';
+
+const MILITARY_LABELS = {
+  active_duty: 'Active Duty', reserve_guard: 'Reserve / National Guard',
+  veteran: 'Veteran (previously served)', none: 'Never served',
+};
+const militaryLabel = (v) => MILITARY_LABELS[v] || v || '—';
+
+const YEARS_AT_ADDRESS_LABELS = {
+  under1: 'Less than 1 year', '1to2': '1–2 years', '3to5': '3–5 years', over5: 'More than 5 years',
+};
+const yearsAtAddressLabel = (v) => YEARS_AT_ADDRESS_LABELS[v] || v || '—';
+
 // Human-readable label maps
 const LIABILITY_LABELS = {
   state_min: 'State Minimum', '10_20_10': '$10k / $20k / $10k',
@@ -131,6 +155,7 @@ function buildHubSpotNote(data) {
       v.usage ? `Use: ${esc(USAGE_LABELS[v.usage] || v.usage)}` : null,
       v.annualMiles ? `Miles: ${esc(MILES_LABELS[v.annualMiles] || v.annualMiles)}` : null,
       v.ownership ? `Ownership: ${esc(OWNERSHIP_LABELS[v.ownership] || v.ownership)}` : null,
+      v.yearsOwned ? `Owned: ${esc(yearsAtAddressLabel(v.yearsOwned))}` : null,
       v.lienholder ? `Lender: ${esc(v.lienholder)}` : null,
       v.garagingSameAsHome === 'yes' ? 'Garaged: Same as home' : v.garagingSameAsHome === 'no' ? `Garaged: ${esc(v.garagingAddress) || '?'}` : null,
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
@@ -168,11 +193,16 @@ ${table([
   row('Date of Birth', esc(data.dateOfBirth)),
   row('Marital Status', data.maritalStatus ? esc(data.maritalStatus.charAt(0).toUpperCase() + data.maritalStatus.slice(1)) : '—'),
   row('Address', esc(data.address) || '—'),
-  row('State / ZIP', `${esc(data.state) || '—'} ${esc(data.zipCode)}`),
+  row('City / State / ZIP', `${esc(data.city) || '—'}, ${esc(data.state) || '—'} ${esc(data.zipCode)}`),
+  row('Years at Address', esc(yearsAtAddressLabel(data.yearsAtAddress))),
+  data.priorAddress ? row('Prior Address', `${esc(data.priorAddress)}, ${esc(data.priorCity) || '—'}, ${esc(data.priorState) || '—'} ${esc(data.priorZipCode) || ''}`) : '',
   row('Homeowner', esc(data.homeownerStatus) || '—'),
   row('Occupation', esc(occLabel(data.occupation))),
+  row('Industry', esc(industryLabel(data.industry))),
+  row('Military Status', esc(militaryLabel(data.militaryStatus))),
   row('License #', esc(data.licenseNumber) || '—'),
   row('License State', esc(data.licenseState) || '—'),
+  row('Age First Licensed', esc(data.ageLicensed) || '—'),
 ].join(''))}
 
 ${h('🚙 Vehicles')}
@@ -205,7 +235,7 @@ function buildSummary(data) {
   const addlCov = (data.additionalCoverages || []).map((c) => COV_LABELS[c] || c).join(', ') || 'None';
 
   const vehicleLines = (data.vehicles || []).map((v, i) =>
-    `  Vehicle ${i + 1}: ${v.year || '—'} ${v.make || '—'} ${v.model || '—'}${v.vin ? ` | VIN: ${v.vin}` : ''} | Use: ${USAGE_LABELS[v.usage] || v.usage || '—'} | Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles || '—'} | Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership || '—'}${v.lienholder ? ` | Lender: ${v.lienholder}` : ''} | Garaged: ${v.garagingSameAsHome === 'yes' ? 'Same as home' : v.garagingSameAsHome === 'no' ? (v.garagingAddress || '—') : '—'}`
+    `  Vehicle ${i + 1}: ${v.year || '—'} ${v.make || '—'} ${v.model || '—'}${v.vin ? ` | VIN: ${v.vin}` : ''} | Use: ${USAGE_LABELS[v.usage] || v.usage || '—'} | Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles || '—'} | Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership || '—'} | Owned: ${yearsAtAddressLabel(v.yearsOwned)}${v.lienholder ? ` | Lender: ${v.lienholder}` : ''} | Garaged: ${v.garagingSameAsHome === 'yes' ? 'Same as home' : v.garagingSameAsHome === 'no' ? (v.garagingAddress || '—') : '—'}`
   ).join('\n') || '  None listed';
 
   const driverLines = data.isOnlyDriver === 'no' && (data.additionalDrivers || []).length
@@ -223,7 +253,7 @@ function buildSummary(data) {
     : '  None';
 
   return [
-    `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Marital: ${fmt(data.maritalStatus)} | Occupation: ${occLabel(data.occupation)}\nState: ${fmt(data.state)} ${fmt(data.zipCode)} | Address: ${fmt(data.address)}\nLicense: ${fmt(data.licenseNumber)} (${fmt(data.licenseState)})`,
+    `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Marital: ${fmt(data.maritalStatus)} | Occupation: ${occLabel(data.occupation)} | Industry: ${industryLabel(data.industry)}\nMilitary Status: ${militaryLabel(data.militaryStatus)}\nAddress: ${fmt(data.address)}, ${fmt(data.city)}, ${fmt(data.state)} ${fmt(data.zipCode)} | Years at Address: ${yearsAtAddressLabel(data.yearsAtAddress)}${data.priorAddress ? `\nPrior Address: ${fmt(data.priorAddress)}, ${fmt(data.priorCity)}, ${fmt(data.priorState)} ${fmt(data.priorZipCode)}` : ''}\nHomeowner: ${fmt(data.homeownerStatus)}\nLicense: ${fmt(data.licenseNumber)} (${fmt(data.licenseState)}) | Age First Licensed: ${fmt(data.ageLicensed)}`,
     `VEHICLES\n${vehicleLines}`,
     `DRIVERS\nOnly Driver: ${fmt(data.isOnlyDriver)}\n${driverLines}`,
     `HISTORY\nViolations: ${fmt(data.hasViolations)}\n${violationLines}\nAccidents: ${fmt(data.hasAccidents)}\n${accidentLines}\nInsured: ${fmt(data.currentlyInsured)} — ${fmt(data.currentInsurer)} (${fmt(data.yearsInsured)}) — $${fmt(data.currentMonthlyPremium)}/mo`,
@@ -283,18 +313,28 @@ function buildEmailHtml(data) {
             </tr>
             <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Address', data.address)}
-              ${metaItem('License #', data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'})` : '—')}
+              ${metaItem('City', data.city)}
               ${metaItem('ZIP', data.zipCode)}
             </tr>
             <tr style="border-top:1px solid #e5f0ef;">
-              ${metaItem('Occupation', occLabel(data.occupation))}
-              ${metaItem('Homeowner', data.homeownerStatus || '—')}
-              ${metaItem('Language', data.language || 'en')}
+              ${metaItem('Years at Address', yearsAtAddressLabel(data.yearsAtAddress))}
+              ${metaItem('License #', data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'})` : '—')}
+              ${metaItem('Age Licensed', data.ageLicensed)}
             </tr>
             <tr style="border-top:1px solid #e5f0ef;">
+              ${metaItem('Occupation', occLabel(data.occupation))}
+              ${metaItem('Industry', industryLabel(data.industry))}
+              ${metaItem('Military', militaryLabel(data.militaryStatus))}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
+              ${metaItem('Homeowner', data.homeownerStatus || '—')}
+              ${metaItem('Language', data.language || 'en')}
               ${metaItem('Liability', (data.liabilityLimit || '—').replace(/_/g, '/'))}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Collision', data.hasCollision === 'yes' ? `Yes ($${data.collisionDeductible})` : 'No')}
               ${metaItem('Comprehensive', data.hasComprehensive === 'yes' ? `Yes ($${data.comprehensiveDeductible})` : 'No')}
+              ${data.priorAddress ? metaItem('Prior Address', `${data.priorAddress}, ${data.priorCity || ''} ${data.priorState || ''}`) : ''}
             </tr>
           </table>
         </td>
@@ -540,6 +580,7 @@ async function notifySlack(data) {
     if (v.usage)      parts.push(`Use: ${v.usage}`);
     if (v.annualMiles) parts.push(`Miles: ${v.annualMiles}`);
     if (v.ownership)  parts.push(`Ownership: ${v.ownership}`);
+    if (v.yearsOwned) parts.push(`Owned: ${yearsAtAddressLabel(v.yearsOwned)}`);
     if (v.garagingSameAsHome === 'yes') parts.push('Garaged: Same as home');
     else if (v.garagingSameAsHome === 'no') parts.push(`Garaged: ${v.garagingAddress || '?'}`);
     return parts.join(' · ');
@@ -576,8 +617,14 @@ async function notifySlack(data) {
       f('State / ZIP', `${data.state || '—'} ${data.zipCode || ''}`),
       f('Marital',    data.maritalStatus),
       f('Occupation', occLabel(data.occupation)),
-      f('Address',    data.address),
-      f('License #',  data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'})` : '—'),
+      f('Industry',   industryLabel(data.industry)),
+      f('Military',   militaryLabel(data.militaryStatus)),
+      f('Homeowner',  data.homeownerStatus),
+    ]},
+    { type: 'section', fields: [
+      f('Address',    `${data.address || '—'}, ${data.city || '—'}`),
+      f('Years at Address', `${yearsAtAddressLabel(data.yearsAtAddress)}${data.priorAddress ? ` (Prior: ${data.priorAddress}, ${data.priorCity || ''} ${data.priorState || ''})` : ''}`),
+      f('License #',  data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'}), licensed at age ${data.ageLicensed || '—'}` : '—'),
     ]},
     { type: 'divider' },
 
@@ -742,6 +789,7 @@ async function saveToHubspot(data) {
     lastname:       data.lastName  || '',
     phone:          data.phone     || '',
     address:        data.address   || '',
+    city:           data.city      || '',
     state:          data.state     || '',
     zip:            data.zipCode   || '',
     lifecyclestage: 'lead',
@@ -914,13 +962,22 @@ async function notifyZapier(data) {
     applicant_email:        data.email      || '',
     applicant_phone:        data.phone      || '',
     applicant_address:      data.address    || '',
+    applicant_city:         data.city       || '',
     applicant_state:        data.state      || '',
     applicant_zip:          data.zipCode    || '',
+    applicant_years_at_address: data.yearsAtAddress || '',
+    applicant_prior_address: data.priorAddress || '',
+    applicant_prior_city:   data.priorCity  || '',
+    applicant_prior_state:  data.priorState || '',
+    applicant_prior_zip:    data.priorZipCode || '',
     applicant_marital:      data.maritalStatus || '',
     applicant_occupation:   data.occupation    || '',
+    applicant_industry:     data.industry      || '',
+    applicant_military_status: data.militaryStatus || '',
     applicant_homeowner:    data.homeownerStatus || '',
     applicant_license_num:  data.licenseNumber  || '',
     applicant_license_state:data.licenseState   || '',
+    applicant_age_licensed: data.ageLicensed    || '',
     currently_insured:      data.currentlyInsured || '',
     current_insurer:        data.currentInsurer  || '',
     years_insured:          data.yearsInsured    || '',
@@ -936,6 +993,7 @@ async function notifyZapier(data) {
     vehicle_1_use:       vehicles[0]?.usage     || '',
     vehicle_1_miles:     vehicles[0]?.annualMiles || '',
     vehicle_1_ownership: vehicles[0]?.ownership  || '',
+    vehicle_1_years_owned: vehicles[0]?.yearsOwned || '',
     vehicle_1_lienholder:vehicles[0]?.lienholder || '',
 
     vehicle_2_year:      vehicles[1]?.year      || '',
@@ -945,6 +1003,7 @@ async function notifyZapier(data) {
     vehicle_2_use:       vehicles[1]?.usage     || '',
     vehicle_2_miles:     vehicles[1]?.annualMiles || '',
     vehicle_2_ownership: vehicles[1]?.ownership  || '',
+    vehicle_2_years_owned: vehicles[1]?.yearsOwned || '',
 
     vehicle_3_year:      vehicles[2]?.year  || '',
     vehicle_3_make:      vehicles[2]?.make  || '',

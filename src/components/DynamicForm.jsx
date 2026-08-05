@@ -15,7 +15,7 @@ function evalCondition(cond, data) {
 }
 
 function resolveOptions(field, t) {
-  if (field.id === 'state' || field.id === 'licenseState') return STATE_OPTIONS;
+  if (field.id === 'state' || field.id === 'licenseState' || field.id === 'priorState') return STATE_OPTIONS;
   if (!field.options) return [];
   return field.options.map((o) => ({
     value: o.value,

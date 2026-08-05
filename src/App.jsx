@@ -23,7 +23,15 @@ const INITIAL_DATA = {
   zipCode: '',
   homeownerStatus: '',
   address: '',
+  city: '',
   occupation: '',
+  industry: '',
+  militaryStatus: '',
+  priorAddress: '',
+  priorCity: '',
+  priorState: '',
+  priorZipCode: '',
+  ageLicensed: '',
   // Primary driver license
   licenseNumber: '',
   licenseState: '',
@@ -53,7 +61,7 @@ const INITIAL_DATA = {
   additionalNotes: '',
 };
 
-const CONTACT_REQUIRED = ['firstName', 'lastName', 'dateOfBirth', 'maritalStatus', 'email', 'phone', 'address', 'state', 'zipCode', 'licenseNumber', 'licenseState', 'occupation'];
+const CONTACT_REQUIRED = ['firstName', 'lastName', 'dateOfBirth', 'maritalStatus', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'licenseNumber', 'licenseState', 'occupation', 'industry', 'militaryStatus'];
 
 // Steps: 0=Language, 1=Contact, 2=Vehicles, 3=Drivers, 4=History, 5=Coverage, 6=Success
 const TOTAL_STEPS = 5; // shown in progress bar (steps 1–5)
@@ -102,6 +110,12 @@ export default function App() {
     for (const f of CONTACT_REQUIRED) {
       if (!data[f]) errs[f] = t('common.required');
     }
+    if (['under1', '1to2'].includes(data.yearsAtAddress)) {
+      for (const f of ['priorAddress', 'priorCity', 'priorState', 'priorZipCode']) {
+        if (!data[f]) errs[f] = t('common.required');
+      }
+    }
+    if (!data.ageLicensed) errs.ageLicensed = t('common.required');
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       errs.email = t('common.invalidEmail');
     }

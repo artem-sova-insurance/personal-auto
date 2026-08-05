@@ -49,6 +49,12 @@ export default function ContactStep({ t, data, update, errors, onNext, onBack })
             options={STATE_OPTIONS} required
             error={errors.licenseState}
           />
+          <FormField
+            id="ageLicensed" type="number" label={t('contact.ageLicensed')}
+            value={data.ageLicensed} onChange={(v) => update('ageLicensed', v)}
+            placeholder="16" min="14" max="100" required
+            error={errors.ageLicensed}
+          />
         </div>
 
         {/* License photo upload */}
