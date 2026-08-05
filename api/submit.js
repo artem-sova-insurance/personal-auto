@@ -114,6 +114,47 @@ const YEARS_AT_ADDRESS_LABELS = {
 };
 const yearsAtAddressLabel = (v) => YEARS_AT_ADDRESS_LABELS[v] || v || '—';
 
+const EDUCATION_LABELS = {
+  no_hs: 'No high school diploma', hs: 'High school diploma / GED', some_college: 'Some college (no degree)',
+  associate: 'Associate degree', bachelors: "Bachelor's degree", masters: "Master's degree",
+  doctorate: 'Doctorate / Professional degree',
+};
+const educationLabel = (v) => EDUCATION_LABELS[v] || v || '—';
+
+const GENDER_LABELS = { male: 'Male', female: 'Female', x: 'Non-binary / X' };
+const genderLabel = (v) => GENDER_LABELS[v] || v || '—';
+
+const LICENSE_TYPE_LABELS = {
+  us: 'U.S. driver license', foreign: 'Foreign driver license', permit: "Learner's permit",
+};
+const licenseTypeLabel = (v) => LICENSE_TYPE_LABELS[v] || v || '—';
+
+const LAPSE_LABELS = { under30: 'Less than 30 days', '30to90': '30–90 days', over90: 'More than 90 days' };
+const lapseLabel = (v) => LAPSE_LABELS[v] || v || '—';
+
+const CONTACT_PREF_LABELS = { call: 'Phone call', text: 'Text', whatsapp: 'WhatsApp', email: 'Email' };
+const contactPrefLabel = (v) => CONTACT_PREF_LABELS[v] || v || '—';
+
+const CONTACT_TIME_LABELS = {
+  morning: 'Morning (8am–12pm)', afternoon: 'Afternoon (12pm–5pm)',
+  evening: 'Evening (5pm–8pm)', anytime: 'Anytime',
+};
+const contactTimeLabel = (v) => CONTACT_TIME_LABELS[v] || v || '—';
+
+const PAYMENT_PREF_LABELS = {
+  full: 'Pay in full', monthly_autopay: 'Monthly — autopay',
+  monthly_manual: 'Monthly — pay manually', unsure: 'Not sure yet',
+};
+const paymentPrefLabel = (v) => PAYMENT_PREF_LABELS[v] || v || '—';
+
+const SAFETY_FEATURE_LABELS = {
+  alarm: 'Factory alarm', tracking: 'GPS tracking', immobilizer: 'Engine immobilizer', dashcam: 'Dashcam',
+  blind_spot: 'Blind-spot monitoring', auto_braking: 'Automatic emergency braking',
+  lane_assist: 'Lane-departure warning', backup_cam: 'Backup camera',
+};
+const safetyFeaturesLabel = (arr) =>
+  Array.isArray(arr) && arr.length ? arr.map((s) => SAFETY_FEATURE_LABELS[s] || s).join(', ') : '—';
+
 // Human-readable label maps
 const LIABILITY_LABELS = {
   state_min: 'State Minimum', '10_20_10': '$10k / $20k / $10k',
@@ -156,6 +197,7 @@ function buildHubSpotNote(data) {
       v.annualMiles ? `Miles: ${esc(MILES_LABELS[v.annualMiles] || v.annualMiles)}` : null,
       v.ownership ? `Ownership: ${esc(OWNERSHIP_LABELS[v.ownership] || v.ownership)}` : null,
       v.yearsOwned ? `Owned: ${esc(yearsAtAddressLabel(v.yearsOwned))}` : null,
+      (v.safetyFeatures || []).length ? `Safety: ${esc(safetyFeaturesLabel(v.safetyFeatures))}` : null,
       v.lienholder ? `Lender: ${esc(v.lienholder)}` : null,
       v.garagingSameAsHome === 'yes' ? 'Garaged: Same as home' : v.garagingSameAsHome === 'no' ? `Garaged: ${esc(v.garagingAddress) || '?'}` : null,
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
@@ -191,6 +233,7 @@ ${table([
   row('Email', esc(data.email)),
   row('Phone', esc(data.phone)),
   row('Date of Birth', esc(data.dateOfBirth)),
+  row('Gender', esc(genderLabel(data.gender))),
   row('Marital Status', data.maritalStatus ? esc(data.maritalStatus.charAt(0).toUpperCase() + data.maritalStatus.slice(1)) : '—'),
   row('Address', esc(data.address) || '—'),
   row('City / State / ZIP', `${esc(data.city) || '—'}, ${esc(data.state) || '—'} ${esc(data.zipCode)}`),
@@ -199,23 +242,35 @@ ${table([
   row('Homeowner', esc(data.homeownerStatus) || '—'),
   row('Occupation', esc(occLabel(data.occupation))),
   row('Industry', esc(industryLabel(data.industry))),
+  row('Education', esc(educationLabel(data.education))),
   row('Military Status', esc(militaryLabel(data.militaryStatus))),
   row('License #', esc(data.licenseNumber) || '—'),
   row('License State', esc(data.licenseState) || '—'),
+  row('License Type', esc(licenseTypeLabel(data.licenseType))),
+  data.licenseType === 'foreign' ? row('Years Licensed in U.S.', esc(yearsAtAddressLabel(data.yearsLicensedUS))) : '',
   row('Age First Licensed', esc(data.ageLicensed) || '—'),
+  row('Defensive Driving Course', esc(fmt(data.defensiveDriving))),
+  data.goodStudent ? row('Good Student', esc(fmt(data.goodStudent))) : '',
+  row('Preferred Contact', `${esc(contactPrefLabel(data.preferredContact))} — ${esc(contactTimeLabel(data.bestTimeToContact))}`),
 ].join(''))}
 
 ${h('🚙 Vehicles')}
 ${table(vehicleRows || row('Vehicles', 'None listed'))}
 
 ${h('👥 Drivers')}
-${table(driverRows)}
+${table([
+  driverRows,
+  row('Other Licensed in Household', data.otherHouseholdLicensed === 'yes' ? `Yes — ${esc(data.otherHouseholdDetails) || 'no details given'}` : esc(fmt(data.otherHouseholdLicensed))),
+].join(''))}
 
 ${h('📋 Driving History')}
 ${table([
   violRows,
   accRows,
   row('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${esc(data.currentInsurer) || '?'} (${esc(data.yearsInsured) || '?'}) — $${esc(data.currentMonthlyPremium) || '?'}/mo` : 'No'),
+  data.currentlyInsured === 'yes' ? row('Prior Liability Limits', esc((LIABILITY_LABELS[data.priorBiLimits] || data.priorBiLimits || '—'))) : '',
+  row('Coverage Lapse', data.hasLapse === 'yes' ? `Yes — ${esc(lapseLabel(data.lapseDuration))}` : esc(fmt(data.hasLapse))),
+  row('SR-22 / FR-44 Required', esc(fmt(data.sr22Required))),
 ].join(''))}
 
 ${h('🛡️ Coverage Preferences')}
@@ -224,6 +279,8 @@ ${table([
   row('Collision', data.hasCollision === 'yes' ? `Yes — Deductible: ${fmtDeductible(data.collisionDeductible)}` : 'No'),
   row('Comprehensive', data.hasComprehensive === 'yes' ? `Yes — Deductible: ${fmtDeductible(data.comprehensiveDeductible)}` : 'No'),
   row('Additional Coverages', addlCov),
+  row('Payment Preference', esc(paymentPrefLabel(data.paymentPreference))),
+  row('Paperless', esc(fmt(data.paperless))),
   data.additionalNotes ? row('Notes', esc(data.additionalNotes)) : '',
 ].join(''))}
 
@@ -235,7 +292,7 @@ function buildSummary(data) {
   const addlCov = (data.additionalCoverages || []).map((c) => COV_LABELS[c] || c).join(', ') || 'None';
 
   const vehicleLines = (data.vehicles || []).map((v, i) =>
-    `  Vehicle ${i + 1}: ${v.year || '—'} ${v.make || '—'} ${v.model || '—'}${v.vin ? ` | VIN: ${v.vin}` : ''} | Use: ${USAGE_LABELS[v.usage] || v.usage || '—'} | Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles || '—'} | Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership || '—'} | Owned: ${yearsAtAddressLabel(v.yearsOwned)}${v.lienholder ? ` | Lender: ${v.lienholder}` : ''} | Garaged: ${v.garagingSameAsHome === 'yes' ? 'Same as home' : v.garagingSameAsHome === 'no' ? (v.garagingAddress || '—') : '—'}`
+    `  Vehicle ${i + 1}: ${v.year || '—'} ${v.make || '—'} ${v.model || '—'}${v.vin ? ` | VIN: ${v.vin}` : ''} | Use: ${USAGE_LABELS[v.usage] || v.usage || '—'} | Miles: ${MILES_LABELS[v.annualMiles] || v.annualMiles || '—'} | Ownership: ${OWNERSHIP_LABELS[v.ownership] || v.ownership || '—'} | Owned: ${yearsAtAddressLabel(v.yearsOwned)}${v.lienholder ? ` | Lender: ${v.lienholder}` : ''} | Garaged: ${v.garagingSameAsHome === 'yes' ? 'Same as home' : v.garagingSameAsHome === 'no' ? (v.garagingAddress || '—') : '—'}\n     Safety features: ${safetyFeaturesLabel(v.safetyFeatures)}`
   ).join('\n') || '  None listed';
 
   const driverLines = data.isOnlyDriver === 'no' && (data.additionalDrivers || []).length
@@ -253,11 +310,11 @@ function buildSummary(data) {
     : '  None';
 
   return [
-    `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Marital: ${fmt(data.maritalStatus)} | Occupation: ${occLabel(data.occupation)} | Industry: ${industryLabel(data.industry)}\nMilitary Status: ${militaryLabel(data.militaryStatus)}\nAddress: ${fmt(data.address)}, ${fmt(data.city)}, ${fmt(data.state)} ${fmt(data.zipCode)} | Years at Address: ${yearsAtAddressLabel(data.yearsAtAddress)}${data.priorAddress ? `\nPrior Address: ${fmt(data.priorAddress)}, ${fmt(data.priorCity)}, ${fmt(data.priorState)} ${fmt(data.priorZipCode)}` : ''}\nHomeowner: ${fmt(data.homeownerStatus)}\nLicense: ${fmt(data.licenseNumber)} (${fmt(data.licenseState)}) | Age First Licensed: ${fmt(data.ageLicensed)}`,
+    `CONTACT\nName: ${name} | Email: ${fmt(data.email)} | Phone: ${fmt(data.phone)}\nDOB: ${fmt(data.dateOfBirth)} | Gender: ${genderLabel(data.gender)} | Marital: ${fmt(data.maritalStatus)}\nOccupation: ${occLabel(data.occupation)} | Industry: ${industryLabel(data.industry)}\nEducation: ${educationLabel(data.education)} | Military Status: ${militaryLabel(data.militaryStatus)}\nAddress: ${fmt(data.address)}, ${fmt(data.city)}, ${fmt(data.state)} ${fmt(data.zipCode)} | Years at Address: ${yearsAtAddressLabel(data.yearsAtAddress)}${data.priorAddress ? `\nPrior Address: ${fmt(data.priorAddress)}, ${fmt(data.priorCity)}, ${fmt(data.priorState)} ${fmt(data.priorZipCode)}` : ''}\nHomeowner: ${fmt(data.homeownerStatus)}\nLicense: ${fmt(data.licenseNumber)} (${fmt(data.licenseState)}) | Type: ${licenseTypeLabel(data.licenseType)}${data.licenseType === 'foreign' ? ` | Licensed in U.S.: ${yearsAtAddressLabel(data.yearsLicensedUS)}` : ''} | Age First Licensed: ${fmt(data.ageLicensed)}\nDefensive Driving Course: ${fmt(data.defensiveDriving)}${data.goodStudent ? ` | Good Student: ${fmt(data.goodStudent)}` : ''}\nPreferred Contact: ${contactPrefLabel(data.preferredContact)} — ${contactTimeLabel(data.bestTimeToContact)}`,
     `VEHICLES\n${vehicleLines}`,
-    `DRIVERS\nOnly Driver: ${fmt(data.isOnlyDriver)}\n${driverLines}`,
-    `HISTORY\nViolations: ${fmt(data.hasViolations)}\n${violationLines}\nAccidents: ${fmt(data.hasAccidents)}\n${accidentLines}\nInsured: ${fmt(data.currentlyInsured)} — ${fmt(data.currentInsurer)} (${fmt(data.yearsInsured)}) — $${fmt(data.currentMonthlyPremium)}/mo`,
-    `COVERAGE\nLiability: ${LIABILITY_LABELS[data.liabilityLimit] || data.liabilityLimit || '—'}\nCollision: ${fmt(data.hasCollision)}${data.hasCollision === 'yes' ? ` | Ded: ${fmtDeductible(data.collisionDeductible)}` : ''}\nComprehensive: ${fmt(data.hasComprehensive)}${data.hasComprehensive === 'yes' ? ` | Ded: ${fmtDeductible(data.comprehensiveDeductible)}` : ''}\nAdditional: ${addlCov}\nNotes: ${fmt(data.additionalNotes)}`,
+    `DRIVERS\nOnly Driver: ${fmt(data.isOnlyDriver)}\n${driverLines}\nOther licensed in household: ${fmt(data.otherHouseholdLicensed)}${data.otherHouseholdLicensed === 'yes' ? ` — ${fmt(data.otherHouseholdDetails)}` : ''}`,
+    `HISTORY\nViolations: ${fmt(data.hasViolations)}\n${violationLines}\nAccidents: ${fmt(data.hasAccidents)}\n${accidentLines}\nInsured: ${fmt(data.currentlyInsured)} — ${fmt(data.currentInsurer)} (${fmt(data.yearsInsured)}) — $${fmt(data.currentMonthlyPremium)}/mo${data.currentlyInsured === 'yes' ? `\nPrior Liability Limits: ${LIABILITY_LABELS[data.priorBiLimits] || data.priorBiLimits || '—'}` : ''}\nCoverage Lapse: ${fmt(data.hasLapse)}${data.hasLapse === 'yes' ? ` — ${lapseLabel(data.lapseDuration)}` : ''}\nSR-22 / FR-44 Required: ${fmt(data.sr22Required)}`,
+    `COVERAGE\nLiability: ${LIABILITY_LABELS[data.liabilityLimit] || data.liabilityLimit || '—'}\nCollision: ${fmt(data.hasCollision)}${data.hasCollision === 'yes' ? ` | Ded: ${fmtDeductible(data.collisionDeductible)}` : ''}\nComprehensive: ${fmt(data.hasComprehensive)}${data.hasComprehensive === 'yes' ? ` | Ded: ${fmtDeductible(data.comprehensiveDeductible)}` : ''}\nAdditional: ${addlCov}\nPayment: ${paymentPrefLabel(data.paymentPreference)} | Paperless: ${fmt(data.paperless)}\nNotes: ${fmt(data.additionalNotes)}`,
   ].join('\n\n──────────────────────────────────\n\n');
 }
 
@@ -309,7 +366,12 @@ function buildEmailHtml(data) {
             <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Email', data.email)}
               ${metaItem('DOB', data.dateOfBirth)}
+              ${metaItem('Gender', genderLabel(data.gender))}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Marital', data.maritalStatus)}
+              ${metaItem('Education', educationLabel(data.education))}
+              ${metaItem('SR-22 / FR-44', fmt(data.sr22Required))}
             </tr>
             <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Address', data.address)}
@@ -320,6 +382,16 @@ function buildEmailHtml(data) {
               ${metaItem('Years at Address', yearsAtAddressLabel(data.yearsAtAddress))}
               ${metaItem('License #', data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'})` : '—')}
               ${metaItem('Age Licensed', data.ageLicensed)}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
+              ${metaItem('License Type', licenseTypeLabel(data.licenseType))}
+              ${metaItem('Coverage Lapse', data.hasLapse === 'yes' ? lapseLabel(data.lapseDuration) : fmt(data.hasLapse))}
+              ${metaItem('Prior Limits', LIABILITY_LABELS[data.priorBiLimits] || data.priorBiLimits || '—')}
+            </tr>
+            <tr style="border-top:1px solid #e5f0ef;">
+              ${metaItem('Preferred Contact', `${contactPrefLabel(data.preferredContact)} — ${contactTimeLabel(data.bestTimeToContact)}`)}
+              ${metaItem('Payment', paymentPrefLabel(data.paymentPreference))}
+              ${metaItem('Defensive Driving', fmt(data.defensiveDriving))}
             </tr>
             <tr style="border-top:1px solid #e5f0ef;">
               ${metaItem('Occupation', occLabel(data.occupation))}
@@ -581,6 +653,7 @@ async function notifySlack(data) {
     if (v.annualMiles) parts.push(`Miles: ${v.annualMiles}`);
     if (v.ownership)  parts.push(`Ownership: ${v.ownership}`);
     if (v.yearsOwned) parts.push(`Owned: ${yearsAtAddressLabel(v.yearsOwned)}`);
+    if ((v.safetyFeatures || []).length) parts.push(`Safety: ${safetyFeaturesLabel(v.safetyFeatures)}`);
     if (v.garagingSameAsHome === 'yes') parts.push('Garaged: Same as home');
     else if (v.garagingSameAsHome === 'no') parts.push(`Garaged: ${v.garagingAddress || '?'}`);
     return parts.join(' · ');
@@ -599,6 +672,11 @@ async function notifySlack(data) {
   if (data.hasViolations   === 'yes') flags.push(`⚠️ Violations: ${(data.violations || []).length}`);
   if (data.hasAccidents    === 'yes') flags.push(`🚨 Accidents: ${(data.accidents || []).length}`);
   if (data.currentlyInsured === 'no') flags.push('❌ No current insurance');
+  if (data.sr22Required    === 'yes') flags.push('📄 SR-22 / FR-44 required');
+  if (data.hasLapse        === 'yes') flags.push(`⏸️ Coverage lapse: ${lapseLabel(data.lapseDuration)}`);
+  if (data.licenseType === 'foreign') flags.push('🌍 Foreign license');
+  if (data.militaryStatus && data.militaryStatus !== 'none') flags.push(`🎖️ ${militaryLabel(data.militaryStatus)}`);
+  if (data.otherHouseholdLicensed === 'yes') flags.push('🏠 Other licensed household member');
   if (addlDrivers.length > 0)        flags.push(`👥 ${addlDrivers.length} additional driver(s)`);
   if (vehicles.some((v) => v.usage === 'rideshare')) flags.push('🚕 Rideshare use');
   if (vehicles.some((v) => v.usage === 'turo'))      flags.push('🔑 Turo use');
@@ -613,11 +691,12 @@ async function notifySlack(data) {
       f('Name',       name),
       f('Phone',      data.phone),
       f('Email',      data.email),
-      f('DOB',        data.dateOfBirth),
+      f('DOB',        `${data.dateOfBirth || '—'} · ${genderLabel(data.gender)}`),
       f('State / ZIP', `${data.state || '—'} ${data.zipCode || ''}`),
       f('Marital',    data.maritalStatus),
       f('Occupation', occLabel(data.occupation)),
       f('Industry',   industryLabel(data.industry)),
+      f('Education',  educationLabel(data.education)),
       f('Military',   militaryLabel(data.militaryStatus)),
       f('Homeowner',  data.homeownerStatus),
     ]},
@@ -625,6 +704,9 @@ async function notifySlack(data) {
       f('Address',    `${data.address || '—'}, ${data.city || '—'}`),
       f('Years at Address', `${yearsAtAddressLabel(data.yearsAtAddress)}${data.priorAddress ? ` (Prior: ${data.priorAddress}, ${data.priorCity || ''} ${data.priorState || ''})` : ''}`),
       f('License #',  data.licenseNumber ? `${data.licenseNumber} (${data.licenseState || '—'}), licensed at age ${data.ageLicensed || '—'}` : '—'),
+      f('License Type', `${licenseTypeLabel(data.licenseType)}${data.licenseType === 'foreign' ? ` · in U.S. ${yearsAtAddressLabel(data.yearsLicensedUS)}` : ''}`),
+      f('Defensive Driving', `${fmt(data.defensiveDriving)}${data.goodStudent === 'yes' ? ' · 🎓 Good student' : ''}`),
+      f('Preferred Contact', `${contactPrefLabel(data.preferredContact)} — ${contactTimeLabel(data.bestTimeToContact)}`),
     ]},
     { type: 'divider' },
 
@@ -638,6 +720,7 @@ async function notifySlack(data) {
       f('Collision',     collision),
       f('Comprehensive', comprehensive),
       f('Add-ons',       addlCov),
+      f('Payment',       `${paymentPrefLabel(data.paymentPreference)}${data.paperless === 'yes' ? ' · paperless' : ''}`),
     ]},
     { type: 'divider' },
 
@@ -645,6 +728,10 @@ async function notifySlack(data) {
     { type: 'section', fields: [
       f('Drivers',          driverLines),
       f('Currently Insured', data.currentlyInsured === 'yes' ? `Yes — ${data.currentInsurer || '?'} (${data.yearsInsured || '?'}) — $${data.currentMonthlyPremium || '?'}/mo` : 'No'),
+      f('Prior Limits',     LIABILITY_LABELS[data.priorBiLimits] || data.priorBiLimits || '—'),
+      f('Coverage Lapse',   data.hasLapse === 'yes' ? lapseLabel(data.lapseDuration) : fmt(data.hasLapse)),
+      f('SR-22 / FR-44',    fmt(data.sr22Required)),
+      f('Other Household Licensed', data.otherHouseholdLicensed === 'yes' ? `Yes — ${data.otherHouseholdDetails || 'no details'}` : fmt(data.otherHouseholdLicensed)),
     ]},
   ];
 
@@ -927,7 +1014,7 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
         prior_insurance:   priorInsurance,
         drivers_on_policy: driverCount,
         vehicles_on_policy:vehicleCount,
-        sr22_required:     'false',
+        sr22_required:     data.sr22Required === 'yes' ? 'true' : 'false',
       },
       associations: [{
         to: { id: contactId },
@@ -959,6 +1046,8 @@ async function notifyZapier(data) {
     applicant_last_name:    data.lastName   || '',
     applicant_full_name:    name,
     applicant_dob:          data.dateOfBirth || '',
+    applicant_gender:       data.gender      || '',
+    applicant_education:    data.education   || '',
     applicant_email:        data.email      || '',
     applicant_phone:        data.phone      || '',
     applicant_address:      data.address    || '',
@@ -977,11 +1066,23 @@ async function notifyZapier(data) {
     applicant_homeowner:    data.homeownerStatus || '',
     applicant_license_num:  data.licenseNumber  || '',
     applicant_license_state:data.licenseState   || '',
+    applicant_license_type: data.licenseType    || '',
+    applicant_years_licensed_us: data.yearsLicensedUS || '',
     applicant_age_licensed: data.ageLicensed    || '',
+    applicant_defensive_driving: data.defensiveDriving || '',
+    applicant_good_student: data.goodStudent    || '',
+    preferred_contact_method: data.preferredContact  || '',
+    best_time_to_contact:   data.bestTimeToContact || '',
     currently_insured:      data.currentlyInsured || '',
     current_insurer:        data.currentInsurer  || '',
     years_insured:          data.yearsInsured    || '',
     current_monthly_premium: data.currentMonthlyPremium || '',
+    prior_bi_limits:        data.priorBiLimits   || '',
+    has_lapse:              data.hasLapse        || '',
+    lapse_duration:         data.lapseDuration   || '',
+    sr22_required:          data.sr22Required    || '',
+    other_household_licensed: data.otherHouseholdLicensed || '',
+    other_household_details:  data.otherHouseholdDetails  || '',
 
     // ── Vehicles ─────────────────────────────────────────────────────────────
     vehicle_count: vehicles.length,
@@ -994,6 +1095,7 @@ async function notifyZapier(data) {
     vehicle_1_miles:     vehicles[0]?.annualMiles || '',
     vehicle_1_ownership: vehicles[0]?.ownership  || '',
     vehicle_1_years_owned: vehicles[0]?.yearsOwned || '',
+    vehicle_1_safety_features: (vehicles[0]?.safetyFeatures || []).join(', '),
     vehicle_1_lienholder:vehicles[0]?.lienholder || '',
 
     vehicle_2_year:      vehicles[1]?.year      || '',
@@ -1004,6 +1106,7 @@ async function notifyZapier(data) {
     vehicle_2_miles:     vehicles[1]?.annualMiles || '',
     vehicle_2_ownership: vehicles[1]?.ownership  || '',
     vehicle_2_years_owned: vehicles[1]?.yearsOwned || '',
+    vehicle_2_safety_features: (vehicles[1]?.safetyFeatures || []).join(', '),
 
     vehicle_3_year:      vehicles[2]?.year  || '',
     vehicle_3_make:      vehicles[2]?.make  || '',
@@ -1044,6 +1147,8 @@ async function notifyZapier(data) {
     has_comprehensive:         data.hasComprehensive      || '',
     comprehensive_deductible:  data.comprehensiveDeductible || '',
     additional_coverages:      (data.additionalCoverages || []).join(', '),
+    payment_preference:        data.paymentPreference || '',
+    paperless:                 data.paperless || '',
     uninsured_motorist:        (data.additionalCoverages || []).includes('uninsured_motorist') ? 'yes' : 'no',
     roadside_assistance:       (data.additionalCoverages || []).includes('roadside') ? 'yes' : 'no',
     rental_reimbursement:      (data.additionalCoverages || []).includes('rental')   ? 'yes' : 'no',

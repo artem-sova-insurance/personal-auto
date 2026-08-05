@@ -175,6 +175,15 @@ export const CONTACT_FIELDS = [
   },
   { id: 'dateOfBirth', type: 'date', label: 'Date of Birth', helpText: 'Format: MM/DD/YYYY', required: true, max: new Date().toISOString().slice(0, 10) },
   {
+    id: 'gender', type: 'radio', label: 'Gender', required: true,
+    helpText: 'Most carriers use this as a rating factor',
+    options: [
+      { value: 'male',   label: 'Male' },
+      { value: 'female', label: 'Female' },
+      { value: 'x',      label: 'Non-binary / X' },
+    ],
+  },
+  {
     id: 'maritalStatus', type: 'radio', labelKey: 'common.maritalStatus', label: 'Marital Status', required: true,
     options: [
       { value: 'single',   labelKey: 'common.single',   label: 'Single' },
@@ -300,6 +309,37 @@ export const CONTACT_FIELDS = [
       { value: 'none',          label: 'Never served'             },
     ],
   },
+  {
+    id: 'education', type: 'select', label: 'Highest Level of Education', required: true,
+    helpText: 'Many carriers offer a discount based on education',
+    options: [
+      { value: 'no_hs',       label: 'No high school diploma'        },
+      { value: 'hs',          label: 'High school diploma / GED'     },
+      { value: 'some_college',label: 'Some college (no degree)'      },
+      { value: 'associate',   label: "Associate degree"              },
+      { value: 'bachelors',   label: "Bachelor's degree"             },
+      { value: 'masters',     label: "Master's degree"               },
+      { value: 'doctorate',   label: 'Doctorate / Professional degree'},
+    ],
+  },
+  {
+    id: 'preferredContact', type: 'radio', label: 'How would you prefer we reach you?',
+    options: [
+      { value: 'call',     label: '📞 Phone call' },
+      { value: 'text',     label: '💬 Text' },
+      { value: 'whatsapp', label: '🟢 WhatsApp' },
+      { value: 'email',    label: '✉️ Email' },
+    ],
+  },
+  {
+    id: 'bestTimeToContact', type: 'select', label: 'Best time to reach you',
+    options: [
+      { value: 'morning',   label: 'Morning (8am – 12pm)'   },
+      { value: 'afternoon', label: 'Afternoon (12pm – 5pm)' },
+      { value: 'evening',   label: 'Evening (5pm – 8pm)'    },
+      { value: 'anytime',   label: 'Anytime'                },
+    ],
+  },
 ];
 
 // ── Coverage step fields ──────────────────────────────────────────────────────
@@ -349,6 +389,21 @@ export const COVERAGE_FIELDS = [
       { value: 'rental',             labelKey: 'coverage.cov_rental',    label: 'Rental Car Reimbursement' },
       { value: 'towing',             labelKey: 'coverage.cov_towing',    label: 'Towing & Labor' },
     ],
+  },
+  {
+    id: 'paymentPreference', type: 'radio', label: 'How would you like to pay?',
+    helpText: 'Paying in full or enrolling in autopay usually lowers your premium',
+    options: [
+      { value: 'full',            label: 'Pay in full'          },
+      { value: 'monthly_autopay', label: 'Monthly — autopay'    },
+      { value: 'monthly_manual',  label: 'Monthly — pay manually' },
+      { value: 'unsure',          label: 'Not sure yet'         },
+    ],
+  },
+  {
+    id: 'paperless', type: 'radio', label: 'Interested in paperless documents?',
+    helpText: 'Most carriers give a small discount for going paperless',
+    options: YES_NO,
   },
   {
     id: 'additionalNotes', type: 'textarea', labelKey: 'coverage.additionalNotes', label: 'Anything else we should know?',

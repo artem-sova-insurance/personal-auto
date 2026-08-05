@@ -183,6 +183,26 @@ export default function DriversStep({ t, data, update, onNext, onBack }) {
         </div>
       )}
 
+      {/* Other licensed household members — carriers require these to be listed or excluded */}
+      <FormField
+        id="otherHouseholdLicensed" type="radio"
+        label={t('drivers.otherHouseholdLicensed')}
+        value={data.otherHouseholdLicensed}
+        onChange={(v) => update('otherHouseholdLicensed', v)}
+        options={yesNo}
+        helpText={t('drivers.otherHouseholdLicensedHint')}
+      />
+
+      {data.otherHouseholdLicensed === 'yes' && (
+        <FormField
+          id="otherHouseholdDetails" type="textarea"
+          label={t('drivers.otherHouseholdDetails')}
+          value={data.otherHouseholdDetails}
+          onChange={(v) => update('otherHouseholdDetails', v)}
+          placeholder={t('drivers.otherHouseholdPlaceholder')}
+        />
+      )}
+
       {data.isOnlyDriver === 'no' && (
         <>
           {drivers.map((d, i) => (

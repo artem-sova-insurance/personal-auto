@@ -16,6 +16,7 @@ const INITIAL_DATA = {
   firstName: '',
   lastName: '',
   dateOfBirth: '',
+  gender: '',
   maritalStatus: '',
   email: '',
   phone: '',
@@ -27,6 +28,9 @@ const INITIAL_DATA = {
   occupation: '',
   industry: '',
   militaryStatus: '',
+  education: '',
+  preferredContact: '',
+  bestTimeToContact: '',
   priorAddress: '',
   priorCity: '',
   priorState: '',
@@ -35,6 +39,10 @@ const INITIAL_DATA = {
   // Primary driver license
   licenseNumber: '',
   licenseState: '',
+  licenseType: '',
+  yearsLicensedUS: '',
+  defensiveDriving: null,
+  goodStudent: null,
   licensePhotoName: '',
   licensePhotoData: '',
   // Vehicles (array managed in VehiclesStep)
@@ -42,6 +50,8 @@ const INITIAL_DATA = {
   // Drivers
   isOnlyDriver: null,
   additionalDrivers: [],
+  otherHouseholdLicensed: null,
+  otherHouseholdDetails: '',
   // History
   hasViolations: null,
   violations: [],
@@ -51,6 +61,10 @@ const INITIAL_DATA = {
   currentInsurer: '',
   yearsInsured: '',
   currentMonthlyPremium: '',
+  priorBiLimits: '',
+  hasLapse: null,
+  lapseDuration: '',
+  sr22Required: null,
   // Coverage
   liabilityLimit: '',
   hasCollision: null,
@@ -58,10 +72,12 @@ const INITIAL_DATA = {
   hasComprehensive: null,
   comprehensiveDeductible: '',
   additionalCoverages: [],
+  paymentPreference: '',
+  paperless: null,
   additionalNotes: '',
 };
 
-const CONTACT_REQUIRED = ['firstName', 'lastName', 'dateOfBirth', 'maritalStatus', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'licenseNumber', 'licenseState', 'occupation', 'industry', 'militaryStatus'];
+const CONTACT_REQUIRED = ['firstName', 'lastName', 'dateOfBirth', 'gender', 'maritalStatus', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'licenseNumber', 'licenseState', 'licenseType', 'occupation', 'industry', 'militaryStatus', 'education'];
 
 // Steps: 0=Language, 1=Contact, 2=Vehicles, 3=Drivers, 4=History, 5=Coverage, 6=Success
 const TOTAL_STEPS = 5; // shown in progress bar (steps 1–5)
@@ -116,6 +132,7 @@ export default function App() {
       }
     }
     if (!data.ageLicensed) errs.ageLicensed = t('common.required');
+    if (data.licenseType === 'foreign' && !data.yearsLicensedUS) errs.yearsLicensedUS = t('common.required');
     if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       errs.email = t('common.invalidEmail');
     }

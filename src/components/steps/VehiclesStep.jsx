@@ -2,7 +2,18 @@ import { useEffect, useState } from 'react';
 import FormField from '../FormField';
 import { VEHICLE_YEARS, USAGE_OPTIONS, ANNUAL_MILES_OPTIONS, OWNERSHIP_OPTIONS, CAR_MAKES, CAR_MODELS } from '../../config/formConfig';
 
-const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', yearsOwned: '', lienholder: '', garagingSameAsHome: null, garagingAddress: '' };
+const EMPTY_VEHICLE = { year: '', make: '', model: '', vin: '', usage: '', annualMiles: '', ownership: '', yearsOwned: '', lienholder: '', safetyFeatures: [], garagingSameAsHome: null, garagingAddress: '' };
+
+const SAFETY_FEATURE_OPTIONS = [
+  { value: 'alarm',        label: 'Factory alarm system' },
+  { value: 'tracking',     label: 'GPS tracking / recovery (LoJack etc.)' },
+  { value: 'immobilizer',  label: 'Engine immobilizer' },
+  { value: 'dashcam',      label: 'Dashcam' },
+  { value: 'blind_spot',   label: 'Blind-spot monitoring' },
+  { value: 'auto_braking', label: 'Automatic emergency braking' },
+  { value: 'lane_assist',  label: 'Lane-departure warning' },
+  { value: 'backup_cam',   label: 'Backup camera' },
+];
 
 const YEARS_OWNED_OPTIONS = [
   { value: 'under1', label: 'Less than 1 year' },
@@ -229,6 +240,13 @@ function VehicleCard({ index, vehicle, onChange, onRemove, canRemove, t, errors 
       {(vehicle.ownership === 'financed' || vehicle.ownership === 'leased') && (
         <FormField id={`lienholder-${index}`} type="text" label={t('vehicle.lienholder')} value={vehicle.lienholder} onChange={(v) => upd('lienholder', v)} placeholder={t('vehicle.lienholderPlaceholder')} />
       )}
+
+      <FormField
+        id={`safety-${index}`} type="checkbox-group" label={t('vehicle.safetyFeatures')}
+        value={vehicle.safetyFeatures} onChange={(v) => upd('safetyFeatures', v)}
+        options={SAFETY_FEATURE_OPTIONS}
+        helpText={t('vehicle.safetyFeaturesHint')}
+      />
 
       {/* Garaging Address */}
       <div className="mb-2">

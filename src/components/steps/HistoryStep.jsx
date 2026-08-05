@@ -54,6 +54,22 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
     { value: 'over5',  label: t('history.years_over5') },
   ];
 
+  const priorBiLimitOptions = [
+    { value: 'state_min',   label: t('coverage.liability_state_min') },
+    { value: '10_20_10',    label: t('coverage.liability_10_20_10') },
+    { value: '25_50_25',    label: t('coverage.liability_25_50_25') },
+    { value: '50_100_50',   label: t('coverage.liability_50_100_50') },
+    { value: '100_300_100', label: t('coverage.liability_100_300_100') },
+    { value: '250_500_250', label: t('coverage.liability_250_500_250') },
+    { value: 'dont_know',   label: t('history.priorBiDontKnow') },
+  ];
+
+  const lapseDurationOptions = [
+    { value: 'under30',  label: t('history.lapse_under30') },
+    { value: '30to90',   label: t('history.lapse_30to90') },
+    { value: 'over90',   label: t('history.lapse_over90') },
+  ];
+
   const req = t('common.required') || 'Required';
 
   const handleNext = () => {
@@ -87,7 +103,12 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
       if (!data.currentInsurer)         errs.currentInsurer         = req;
       if (!data.yearsInsured)           errs.yearsInsured           = req;
       if (!data.currentMonthlyPremium)  errs.currentMonthlyPremium  = req;
+      if (!data.priorBiLimits)          errs.priorBiLimits          = req;
     }
+
+    if (!data.sr22Required) errs.sr22Required = req;
+    if (!data.hasLapse)     errs.hasLapse     = req;
+    if (data.hasLapse === 'yes' && !data.lapseDuration) errs.lapseDuration = req;
 
     const hasRowErrors = violationErrors.some((e) => Object.keys(e).length > 0)
       || accidentErrors.some((e) => Object.keys(e).length > 0);
@@ -205,12 +226,59 @@ export default function HistoryStep({ t, data, update, onNext, onBack }) {
             placeholder="150"
             error={localErrors.currentMonthlyPremium}
           />
+          <FormField
+            id="priorBiLimits" type="select" label={t('history.priorBiLimits')}
+            value={data.priorBiLimits} onChange={(v) => { update('priorBiLimits', v); clearErr('priorBiLimits'); }}
+            options={priorBiLimitOptions} helpText={t('history.priorBiLimitsHint')}
+            error={localErrors.priorBiLimits}
+          />
         </>
       )}
 
       {data.currentlyInsured === 'no' && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-800">
           ⚠️ {t('history.noInsuranceNote')}
+        </div>
+      )}
+
+      {/* Coverage lapse */}
+      <FormField
+        id="hasLapse" type="radio"
+        label={t('history.hasLapse')}
+        value={data.hasLapse}
+        onChange={(v) => {
+          update('hasLapse', v);
+          clearErr('hasLapse');
+          if (v === 'no') update('lapseDuration', '');
+        }}
+        options={yesNo}
+        helpText={t('history.hasLapseHint')}
+        error={localErrors.hasLapse}
+      />
+
+      {data.hasLapse === 'yes' && (
+        <FormField
+          id="lapseDuration" type="select" label={t('history.lapseDuration')}
+          value={data.lapseDuration} onChange={(v) => { update('lapseDuration', v); clearErr('lapseDuration'); }}
+          options={lapseDurationOptions}
+          error={localErrors.lapseDuration}
+        />
+      )}
+
+      {/* SR-22 / FR-44 */}
+      <FormField
+        id="sr22Required" type="radio"
+        label={t('history.sr22Required')}
+        value={data.sr22Required}
+        onChange={(v) => { update('sr22Required', v); clearErr('sr22Required'); }}
+        options={yesNo}
+        helpText={t('history.sr22Hint')}
+        error={localErrors.sr22Required}
+      />
+
+      {data.sr22Required === 'yes' && (
+        <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3 mb-4 text-sm text-brand-800">
+          {t('history.sr22Note')}
         </div>
       )}
 

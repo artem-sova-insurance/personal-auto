@@ -8,9 +8,32 @@ import { readPhotoFile } from '../../utils/image';
 const FL_FIRST = ['FL', ...US_STATES.filter((s) => s !== 'FL')];
 const STATE_OPTIONS = FL_FIRST.map((s) => ({ value: s, label: s }));
 
+const LICENSE_TYPE_OPTIONS = [
+  { value: 'us',      label: 'U.S. driver license' },
+  { value: 'foreign', label: 'Foreign driver license' },
+  { value: 'permit',  label: "Learner's permit" },
+];
+
+const YEARS_US_LICENSED_OPTIONS = [
+  { value: 'under1', label: 'Less than 1 year' },
+  { value: '1to2',   label: '1–2 years' },
+  { value: '3to5',   label: '3–5 years' },
+  { value: 'over5',  label: 'More than 5 years' },
+];
+
+function getAge(dob) {
+  if (!dob) return null;
+  const diff = Date.now() - new Date(dob).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+}
+
 export default function ContactStep({ t, data, update, errors, onNext, onBack }) {
   const fileRef = useRef(null);
   const [photoError, setPhotoError] = useState('');
+
+  const yesNo = [{ value: 'yes', label: t('common.yes') }, { value: 'no', label: t('common.no') }];
+  const age = getAge(data.dateOfBirth);
+  const isYoung = age !== null && age < 25;
 
   const handlePhoto = async (e) => {
     const f = e.target.files?.[0];
@@ -55,7 +78,39 @@ export default function ContactStep({ t, data, update, errors, onNext, onBack })
             placeholder="16" min="14" max="100" required
             error={errors.ageLicensed}
           />
+          <FormField
+            id="licenseType" type="select" label={t('contact.licenseType')}
+            value={data.licenseType} onChange={(v) => update('licenseType', v)}
+            options={LICENSE_TYPE_OPTIONS} required
+            error={errors.licenseType}
+          />
         </div>
+
+        {data.licenseType === 'foreign' && (
+          <FormField
+            id="yearsLicensedUS" type="select" label={t('contact.yearsLicensedUS')}
+            value={data.yearsLicensedUS} onChange={(v) => update('yearsLicensedUS', v)}
+            options={YEARS_US_LICENSED_OPTIONS} required
+            helpText={t('contact.yearsLicensedUSHint')}
+            error={errors.yearsLicensedUS}
+          />
+        )}
+
+        <FormField
+          id="defensiveDriving" type="radio" label={t('contact.defensiveDriving')}
+          value={data.defensiveDriving} onChange={(v) => update('defensiveDriving', v)}
+          options={yesNo} helpText={t('contact.defensiveDrivingHint')}
+          error={errors.defensiveDriving}
+        />
+
+        {isYoung && (
+          <FormField
+            id="goodStudent" type="radio" label={t('contact.goodStudent')}
+            value={data.goodStudent} onChange={(v) => update('goodStudent', v)}
+            options={yesNo} helpText={t('contact.goodStudentHint')}
+            error={errors.goodStudent}
+          />
+        )}
 
         {/* License photo upload */}
         <div className="mb-4">
