@@ -945,6 +945,27 @@ async function saveToHubspot(data) {
 const AUTO_PIPELINE_ID = 'default';
 const AUTO_QUOTING_STAGE_ID = '1802529492';
 
+// New submissions land in "Need to Quote" — the intake stage that sits ahead of
+// "Quoting", so an agent actively working a quote is distinguishable from a lead
+// that just arrived. Resolved by name; falls back to "Quoting" if the stage has
+// not been created in HubSpot yet.
+const AUTO_INTAKE_STAGE_LABEL = 'need to quote';
+
+// Exact-label match, then the earliest stage by display order. Substring matching
+// is unusable here: "quot" also hits "Presented Quote" and "Requote in 6 months".
+function resolveIntakeStage(pipeline, fallbackId) {
+  const stages = pipeline.stages || pipeline.stageOrder || [];
+  const label = (s) => (s.label || s.displayName || '').trim().toLowerCase();
+  const byLabel = (want) => stages.find((s) => label(s) === want);
+  const firstByOrder = [...stages].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))[0];
+
+  const stage = byLabel(AUTO_INTAKE_STAGE_LABEL) || byLabel('quoting') || firstByOrder;
+  if (!byLabel(AUTO_INTAKE_STAGE_LABEL)) {
+    console.warn(`HubSpot: "Need to Quote" stage not found in "${pipeline.label}" — falling back to "${stage ? (stage.label || stage.displayName) : 'known ID'}".`);
+  }
+  return stage?.id ?? fallbackId;
+}
+
 async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
   // Resolve pipeline + stage — always target "New Business (Auto)" by name;
   // matching on label rather than a hardcoded ID keeps this correct if the
@@ -962,9 +983,7 @@ async function createHubSpotDeal(contactId, hsHeaders, data = {}) {
 
     if (auto) {
       pipelineId = auto.id;
-      const stages = auto.stages || auto.stageOrder || [];
-      const quotingStage = stages.find((s) => (s.label || s.displayName || '').toLowerCase().includes('quot'));
-      stageId = (quotingStage || stages[0])?.id ?? AUTO_QUOTING_STAGE_ID;
+      stageId = resolveIntakeStage(auto, AUTO_QUOTING_STAGE_ID);
     } else {
       console.warn('HubSpot: "New Business (Auto)" pipeline not found by name — using known fallback IDs.');
     }
