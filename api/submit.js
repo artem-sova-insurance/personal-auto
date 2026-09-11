@@ -611,7 +611,7 @@ async function sendEmail(data) {
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from,
-      to: ['info@sovainsurance.com'],
+      to: ['info@sovainsurance.com', 'leads@sovainsurance.com'],
       subject: `🚗 New Auto Insurance Lead — ${name} (${data.state || '?'})`,
       html: buildEmailHtml(data),
       ...(attachments.length > 0 && { attachments }),
