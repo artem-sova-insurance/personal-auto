@@ -1,7 +1,11 @@
 const CUR_YEAR = new Date().getFullYear();
 
-export const VEHICLE_YEARS = Array.from({ length: CUR_YEAR - 1989 }, (_, i) => {
-  const y = String(CUR_YEAR + 1 - i);
+// Dealers sell next-model-year vehicles well before the calendar catches up, so the
+// list runs two years ahead of today (a 2028 model can be bought in 2026).
+const NEWEST_VEHICLE_YEAR = CUR_YEAR + 2;
+
+export const VEHICLE_YEARS = Array.from({ length: NEWEST_VEHICLE_YEAR - 1990 }, (_, i) => {
+  const y = String(NEWEST_VEHICLE_YEAR - i);
   return { value: y, label: y };
 });
 
