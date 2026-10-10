@@ -928,9 +928,38 @@ async function saveToHubspot(data) {
       // Deal
       createHubSpotDeal(contactId, hsHeaders, data),
     ]);
+    await saveIntakeJson(dealRes, hsHeaders, data);
 
     const noteBody = await noteRes.json().catch(() => ({}));
     console.log('HubSpot note status:', noteRes.status, noteBody?.id || '');
+  }
+}
+
+// ── Structured intake record (read by the Sova Autofill extension) ───────────
+
+// The form payload is stored as JSON on the deal so carrier portals can be
+// pre-filled from it. A separate PATCH after the deal exists: if it fails, the
+// lead itself is unaffected. License photos (base64) are left out.
+const INTAKE_JSON_PROPERTY = 'sova_intake_json';
+const INTAKE_JSON_MAX_CHARS = 65000; // HubSpot text property limit is 65,536
+
+async function saveIntakeJson(dealId, hsHeaders, data) {
+  try {
+    const json = JSON.stringify({ v: 1, form: 'personal_auto', data }, (key, value) =>
+      (key === '_hp' || key === '_elapsedMs' || /PhotoData$/.test(key) ? undefined : value));
+    if (json.length > INTAKE_JSON_MAX_CHARS) {
+      console.warn('HubSpot intake JSON skipped: too large,', json.length, 'chars');
+      return;
+    }
+    const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
+      method: 'PATCH',
+      headers: hsHeaders,
+      body: JSON.stringify({ properties: { [INTAKE_JSON_PROPERTY]: json } }),
+    });
+    console.log('HubSpot intake JSON status:', res.status);
+    if (!res.ok) console.warn('HubSpot intake JSON failed (non-fatal)');
+  } catch (err) {
+    console.warn('HubSpot intake JSON failed (non-fatal):', err.message);
   }
 }
 
