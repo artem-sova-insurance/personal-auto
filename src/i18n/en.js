@@ -32,6 +32,10 @@ const en = {
   },
   contact: {
     subtitle: 'Tell us about the primary insured driver.',
+    partAbout: 'About you',
+    partReach: 'How to reach you',
+    partHome: 'Where you live',
+    partWork: 'Work & education',
     address: 'Street Address',
     city: 'City',
     licenseSection: 'Driver License',

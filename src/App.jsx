@@ -88,6 +88,7 @@ export default function App() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [contactPart, setContactPart] = useState(0);
   const startedAt = useRef(Date.now());
 
   const { t } = useTranslation(data.language);
@@ -172,7 +173,7 @@ export default function App() {
     }
   };
 
-  const reset = () => { setData(INITIAL_DATA); setErrors({}); setSubmitError(''); setStep(0); };
+  const reset = () => { setData(INITIAL_DATA); setErrors({}); setSubmitError(''); setContactPart(0); setStep(0); };
 
   const showProgress = step >= 1 && step <= 5;
   const commonProps = { t, data, update, errors };
@@ -211,6 +212,8 @@ export default function App() {
           {step === 1 && (
             <ContactStep
               {...commonProps}
+              part={contactPart}
+              setPart={setContactPart}
               onBack={() => setStep(0)}
               onNext={() => { if (validateContact()) goToStep(2); }}
             />

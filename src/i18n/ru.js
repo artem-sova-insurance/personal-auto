@@ -32,6 +32,10 @@ const ru = {
   },
   contact: {
     subtitle: 'Расскажите нам об основном застрахованном водителе.',
+    partAbout: 'О вас',
+    partReach: 'Как с вами связаться',
+    partHome: 'Где вы живёте',
+    partWork: 'Работа и образование',
     address: 'Адрес',
     city: 'Город',
     licenseSection: 'Водительские права',

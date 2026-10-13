@@ -32,6 +32,10 @@ const es = {
   },
   contact: {
     subtitle: 'Cuéntenos sobre el conductor principal asegurado.',
+    partAbout: 'Sobre usted',
+    partReach: 'Cómo contactarlo',
+    partHome: 'Dónde vive',
+    partWork: 'Trabajo y educación',
     address: 'Dirección',
     city: 'Ciudad',
     licenseSection: 'Licencia de Conducir',

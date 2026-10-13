@@ -32,6 +32,10 @@ const uk = {
   },
   contact: {
     subtitle: 'Розкажіть нам про основного застрахованого водія.',
+    partAbout: 'Про вас',
+    partReach: 'Як з вами зв\'язатися',
+    partHome: 'Де ви живете',
+    partWork: 'Робота та освіта',
     address: 'Адреса',
     city: 'Місто',
     licenseSection: 'Водійське посвідчення',
