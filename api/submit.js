@@ -916,7 +916,7 @@ async function saveToHubspot(data) {
 
   if (contactId) {
     // Create note and deal in parallel
-    const [noteRes, dealRes] = await Promise.all([
+    const [noteSettled, dealSettled] = await Promise.allSettled([
       // Note
       fetch('https://api.hubapi.com/crm/v3/objects/notes', {
         method: 'POST', headers: hsHeaders,
@@ -928,10 +928,15 @@ async function saveToHubspot(data) {
       // Deal
       createHubSpotDeal(contactId, hsHeaders, data),
     ]);
-    await saveIntakeJson(dealRes, hsHeaders, data);
+    if (dealSettled.status === 'rejected') throw dealSettled.reason;
+    await saveIntakeJson(dealSettled.value, hsHeaders, data);
 
-    const noteBody = await noteRes.json().catch(() => ({}));
-    console.log('HubSpot note status:', noteRes.status, noteBody?.id || '');
+    if (noteSettled.status === 'fulfilled') {
+      const noteBody = await noteSettled.value.json().catch(() => ({}));
+      console.log('HubSpot note status:', noteSettled.value.status, noteBody?.id || '');
+    } else {
+      console.warn('HubSpot note failed (non-fatal):', noteSettled.reason?.message);
+    }
   }
 }
 
@@ -945,11 +950,13 @@ const INTAKE_JSON_MAX_CHARS = 65000; // HubSpot text property limit is 65,536
 
 async function saveIntakeJson(dealId, hsHeaders, data) {
   try {
-    const json = JSON.stringify({ v: 1, form: 'personal_auto', data }, (key, value) =>
-      (key === '_hp' || key === '_elapsedMs' || /PhotoData$/.test(key) ? undefined : value));
+    const drop = (key, value) => (key === '_hp' || key === '_elapsedMs' || /PhotoData$/.test(key) || (typeof value === 'string' && value.startsWith('data:')) ? undefined : value);
+    let json = JSON.stringify({ v: 1, form: 'personal_auto', data }, drop);
     if (json.length > INTAKE_JSON_MAX_CHARS) {
-      console.warn('HubSpot intake JSON skipped: too large,', json.length, 'chars');
-      return;
+      // Keep the essentials rather than nothing, and say so, when a submission is too long.
+      console.warn('HubSpot intake JSON too large (', json.length, 'chars) — storing the essentials only');
+      const { firstName, lastName, email, phone, address, city, state, zipCode, vehicles } = data;
+      json = JSON.stringify({ v: 1, form: 'personal_auto', truncated: true, data: { firstName, lastName, email, phone, address, city, state, zipCode, vehicles } }, drop);
     }
     const res = await fetch(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}`, {
       method: 'PATCH',
